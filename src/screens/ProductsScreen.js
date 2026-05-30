@@ -29,6 +29,8 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   const [quantity, setQuantity] = useState('');
   const [imageUri, setImageUri] = useState(null);
   const [errors, setErrors] = useState({});
+  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
 
   React.useEffect(() => {
     if (visible) {
@@ -41,6 +43,13 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   }, [visible, product]);
 
   const pickImage = async () => {
+    if (!mediaPermission?.granted) {
+      const { granted } = await requestMediaPermission();
+      if (!granted) {
+        Alert.alert('Permission needed', 'Allow photo access in your phone settings.');
+        return;
+      }
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -53,10 +62,12 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow camera access in your phone settings.');
-      return;
+    if (!cameraPermission?.granted) {
+      const { granted } = await requestCameraPermission();
+      if (!granted) {
+        Alert.alert('Permission needed', 'Allow camera access in your phone settings.');
+        return;
+      }
     }
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
@@ -164,12 +175,10 @@ const ProductItem = ({ item, onEdit, onDelete, index }) => {
               <Ionicons name="cube-outline" size={24} color={Colors.textMuted} />
             </View>
           )}
-
           <View style={styles.productLeft}>
             <Text style={styles.productName}>{item.name}</Text>
             <Text style={styles.productPrice}>{formatCurrency(item.price)}</Text>
           </View>
-
           <Badge
             label={isOut ? 'Out' : `${item.quantity} pcs`}
             color={isOut ? Colors.danger : isLow ? Colors.warning : Colors.success}
@@ -303,7 +312,6 @@ const styles = StyleSheet.create({
   listContent: { padding: Spacing.md, paddingBottom: 100 },
   listHeader: { marginBottom: Spacing.sm },
   countText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
-
   productCard: { marginBottom: Spacing.sm },
   productRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   productImage: { width: 56, height: 56, borderRadius: Radius.md, backgroundColor: Colors.surfaceAlt },
@@ -315,7 +323,6 @@ const styles = StyleSheet.create({
   productLeft: { flex: 1 },
   productName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 3 },
   productPrice: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
-
   lowStockBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: Colors.warningLight,
@@ -324,7 +331,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   lowStockText: { fontSize: 12, fontWeight: '600' },
-
   productActions: {
     flexDirection: 'row', alignItems: 'center',
     marginTop: Spacing.sm, paddingTop: Spacing.sm,
@@ -333,7 +339,6 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 4 },
   actionDivider: { width: 1, height: 20, backgroundColor: Colors.borderLight },
   actionBtnText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
-
   fab: { position: 'absolute', bottom: Spacing.lg, left: Spacing.md, right: Spacing.md },
   fabButton: {
     backgroundColor: Colors.primary,
@@ -346,7 +351,6 @@ const styles = StyleSheet.create({
     ...Shadow.lg,
   },
   fabText: { color: Colors.textInverse, fontSize: 16, fontWeight: '700' },
-
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
     backgroundColor: Colors.surface,
@@ -359,7 +363,6 @@ const styles = StyleSheet.create({
   modalHandle: { width: 40, height: 4, backgroundColor: Colors.border, borderRadius: 2, alignSelf: 'center', marginBottom: Spacing.md },
   modalTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
   modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
-
   imagePicker: { alignSelf: 'center', marginBottom: Spacing.lg, position: 'relative' },
   imagePreview: { width: 100, height: 100, borderRadius: Radius.lg },
   imagePlaceholder: {

@@ -18,6 +18,7 @@ import {
   addPayment,
   addTabItem,
   decrementStock,
+  deletePayment,
   getCustomerById,
   getPayments,
   getProducts,
@@ -247,18 +248,40 @@ export default function CustomerTabScreen({ route, navigation }) {
     load();
   };
 
+  const handleDeletePayment = (payment) => {
+    Alert.alert(
+      'Undo Payment',
+      `Remove payment of ${formatCurrency(payment.amount)}? The balance will be restored.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await deletePayment(payment.id);
+            load();
+          },
+        },
+      ]
+    );
+  };
+
   const handleSettle = () => {
     if (balance <= 0) return;
-    Alert.alert('Settle Full Balance', `Pay remaining ${formatCurrency(balance)}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Settle',
-        onPress: async () => {
-          await addPayment(initCustomer.id, balance);
-          load();
+    Alert.alert(
+      'Settle Full Balance',
+      `Pay remaining ${formatCurrency(balance)}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Settle',
+          onPress: async () => {
+            await addPayment(initCustomer.id, balance);
+            load();
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   return (
@@ -332,7 +355,11 @@ export default function CustomerTabScreen({ route, navigation }) {
               {tabItems.map((item, index) => (
                 <View key={item.id}>
                   {index > 0 && <Divider />}
-                  <Animated.View entering={FadeInRight.delay(index * 30)} layout={Layout.springify()} style={styles.tabItem}>
+                  <Animated.View
+                    entering={FadeInRight.delay(index * 30)}
+                    layout={Layout.springify()}
+                    style={styles.tabItem}
+                  >
                     <View style={styles.tabItemLeft}>
                       <Text style={styles.tabItemName}>{item.product_name}</Text>
                       <Text style={styles.tabItemMeta}>
@@ -370,10 +397,16 @@ export default function CustomerTabScreen({ route, navigation }) {
                 <View key={pay.id}>
                   {index > 0 && <Divider />}
                   <View style={styles.paymentItem}>
-                    <View>
+                    <View style={styles.paymentLeft}>
+                      <Text style={styles.paymentAmount}>{formatCurrency(pay.amount)}</Text>
                       <Text style={styles.paymentDate}>{formatDateTime(pay.date)}</Text>
                     </View>
-                    <Text style={styles.paymentAmount}>{formatCurrency(pay.amount)}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleDeletePayment(pay)}
+                      style={styles.undoBtn}
+                    >
+                      <Text style={styles.undoBtnText}>↩ Undo</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               ))}
@@ -436,8 +469,15 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 16, fontWeight: '800', color: Colors.primary },
 
   paymentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 12 },
-  paymentDate: { fontSize: 13, color: Colors.textSecondary },
+  paymentLeft: { flex: 1 },
   paymentAmount: { fontSize: 15, fontWeight: '700', color: Colors.success },
+  paymentDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  undoBtn: {
+    paddingHorizontal: 12, paddingVertical: 6,
+    backgroundColor: Colors.dangerLight,
+    borderRadius: Radius.full,
+  },
+  undoBtnText: { fontSize: 12, fontWeight: '700', color: Colors.danger },
 
   emptyCard: { alignItems: 'center', paddingVertical: Spacing.md },
   emptyText: { fontSize: 14, color: Colors.textMuted, fontStyle: 'italic' },
@@ -466,12 +506,9 @@ const styles = StyleSheet.create({
   },
   productList: { maxHeight: 280 },
   productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
-    marginBottom: 4,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md, marginBottom: 4,
   },
   productRowSelected: { backgroundColor: Colors.primaryLight },
   productRowDisabled: { opacity: 0.4 },
