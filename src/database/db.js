@@ -20,6 +20,7 @@ export const initDatabase = async () => {
       name TEXT NOT NULL,
       price REAL NOT NULL DEFAULT 0,
       quantity INTEGER NOT NULL DEFAULT 0,
+      image_uri TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -50,6 +51,13 @@ export const initDatabase = async () => {
       FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
     );
   `);
+
+  // Migration: add image_uri column if it doesn't exist yet
+  try {
+    await database.execAsync(`ALTER TABLE products ADD COLUMN image_uri TEXT;`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
 };
 
 // ─── PRODUCTS ────────────────────────────────────────────────────────────────
@@ -59,20 +67,20 @@ export const getProducts = async () => {
   return await database.getAllAsync('SELECT * FROM products ORDER BY name ASC');
 };
 
-export const addProduct = async (name, price, quantity) => {
+export const addProduct = async (name, price, quantity, imageUri = null) => {
   const database = await getDb();
   const result = await database.runAsync(
-    'INSERT INTO products (name, price, quantity) VALUES (?, ?, ?)',
-    [name, parseFloat(price), parseInt(quantity)]
+    'INSERT INTO products (name, price, quantity, image_uri) VALUES (?, ?, ?, ?)',
+    [name, parseFloat(price), parseInt(quantity), imageUri]
   );
   return result.lastInsertRowId;
 };
 
-export const updateProduct = async (id, name, price, quantity) => {
+export const updateProduct = async (id, name, price, quantity, imageUri = null) => {
   const database = await getDb();
   await database.runAsync(
-    'UPDATE products SET name = ?, price = ?, quantity = ? WHERE id = ?',
-    [name, parseFloat(price), parseInt(quantity), id]
+    'UPDATE products SET name = ?, price = ?, quantity = ?, image_uri = ? WHERE id = ?',
+    [name, parseFloat(price), parseInt(quantity), imageUri, id]
   );
 };
 
@@ -168,7 +176,6 @@ export const getTabItems = async (customerId) => {
 
 export const addTabItem = async (customerId, productId, productName, price, quantity) => {
   const database = await getDb();
-  // Check if item already exists for this customer
   const existing = await database.getFirstAsync(
     'SELECT * FROM tab_items WHERE customer_id = ? AND product_id = ?',
     [customerId, productId]
@@ -222,7 +229,7 @@ export const addPayment = async (customerId, amount) => {
   return result.lastInsertRowId;
 };
 
-export const deletePayment = async (id, customerId, amount) => {
+export const deletePayment = async (id) => {
   const database = await getDb();
   await database.runAsync('DELETE FROM payments WHERE id = ?', [id]);
 };

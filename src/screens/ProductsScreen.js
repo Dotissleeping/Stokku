@@ -10,9 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { addProduct, deleteProduct, getProducts, updateProduct } from '../database/db';
 import { formatCurrency } from '../utils/formatters';
 import { Colors, Radius, Shadow, Spacing } from '../utils/theme';
@@ -21,9 +24,10 @@ import { Badge, Button, Card, EmptyState, Input } from '../components/UI';
 const LOW_STOCK = 5;
 
 const ProductFormModal = ({ visible, product, onClose, onSave }) => {
-  const [name, setName] = useState(product?.name || '');
-  const [price, setPrice] = useState(product?.price?.toString() || '');
-  const [quantity, setQuantity] = useState(product?.quantity?.toString() || '');
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [imageUri, setImageUri] = useState(null);
   const [errors, setErrors] = useState({});
 
   React.useEffect(() => {
@@ -31,9 +35,52 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
       setName(product?.name || '');
       setPrice(product?.price?.toString() || '');
       setQuantity(product?.quantity?.toString() || '');
+      setImageUri(product?.image_uri || null);
       setErrors({});
     }
   }, [visible, product]);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access to add a product image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow camera access to take a product photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleImagePress = () => {
+    Alert.alert('Product Image', 'Choose an option', [
+      { text: 'Take Photo', onPress: takePhoto },
+      { text: 'Choose from Gallery', onPress: pickImage },
+      imageUri ? { text: 'Remove Image', style: 'destructive', onPress: () => setImageUri(null) } : null,
+      { text: 'Cancel', style: 'cancel' },
+    ].filter(Boolean));
+  };
 
   const validate = () => {
     const e = {};
@@ -46,7 +93,7 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
 
   const handleSave = async () => {
     if (!validate()) return;
-    await onSave(name.trim(), parseFloat(price), parseInt(quantity));
+    await onSave(name.trim(), parseFloat(price), parseInt(quantity), imageUri);
     onClose();
   };
 
@@ -58,13 +105,27 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
           <Text style={styles.modalTitle}>{product ? 'Edit Product' : 'New Product'}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Image Picker */}
+            <TouchableOpacity onPress={handleImagePress} style={styles.imagePicker} activeOpacity={0.8}>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="camera-outline" size={32} color={Colors.textMuted} />
+                  <Text style={styles.imagePlaceholderText}>Add Photo</Text>
+                </View>
+              )}
+              <View style={styles.imageEditBadge}>
+                <Ionicons name="pencil" size={12} color={Colors.textInverse} />
+              </View>
+            </TouchableOpacity>
+
             <Input
               label="Product Name"
               value={name}
               onChangeText={setName}
               placeholder="e.g. Coca-Cola 1L"
               error={errors.name}
-              autoFocus
             />
             <Input
               label="Price (₱)"
@@ -102,31 +163,49 @@ const ProductItem = ({ item, onEdit, onDelete, index }) => {
     <Animated.View entering={FadeInRight.delay(index * 40).duration(300)} layout={Layout.springify()}>
       <Card style={styles.productCard}>
         <View style={styles.productRow}>
+          {/* Product Image or Placeholder */}
+          {item.image_uri ? (
+            <Image source={{ uri: item.image_uri }} style={styles.productImage} />
+          ) : (
+            <View style={styles.productImagePlaceholder}>
+              <Ionicons name="cube-outline" size={24} color={Colors.textMuted} />
+            </View>
+          )}
+
           <View style={styles.productLeft}>
             <Text style={styles.productName}>{item.name}</Text>
             <Text style={styles.productPrice}>{formatCurrency(item.price)}</Text>
           </View>
-          <View style={styles.productRight}>
-            <Badge
-              label={isOut ? 'Out' : `${item.quantity} pcs`}
-              color={isOut ? Colors.danger : isLow ? Colors.warning : Colors.success}
-              bg={isOut ? Colors.dangerLight : isLow ? Colors.warningLight : Colors.successLight}
-            />
-          </View>
+
+          <Badge
+            label={isOut ? 'Out' : `${item.quantity} pcs`}
+            color={isOut ? Colors.danger : isLow ? Colors.warning : Colors.success}
+            bg={isOut ? Colors.dangerLight : isLow ? Colors.warningLight : Colors.successLight}
+          />
         </View>
+
         {isLow && (
           <View style={styles.lowStockBanner}>
-            <Text style={styles.lowStockText}>
-              {isOut ? '❌ Out of stock' : `⚠️  Low stock — only ${item.quantity} left`}
+            <Ionicons
+              name={isOut ? 'close-circle-outline' : 'warning-outline'}
+              size={13}
+              color={isOut ? Colors.danger : Colors.warning}
+            />
+            <Text style={[styles.lowStockText, { color: isOut ? Colors.danger : Colors.warning }]}>
+              {isOut ? 'Out of stock' : `Low stock — only ${item.quantity} left`}
             </Text>
           </View>
         )}
+
         <View style={styles.productActions}>
           <TouchableOpacity onPress={() => onEdit(item)} style={styles.actionBtn}>
-            <Text style={styles.actionBtnText}>✏️  Edit</Text>
+            <Ionicons name="pencil-outline" size={15} color={Colors.primary} />
+            <Text style={styles.actionBtnText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(item)} style={[styles.actionBtn, styles.deleteBtn]}>
-            <Text style={[styles.actionBtnText, { color: Colors.danger }]}>🗑  Delete</Text>
+          <View style={styles.actionDivider} />
+          <TouchableOpacity onPress={() => onDelete(item)} style={styles.actionBtn}>
+            <Ionicons name="trash-outline" size={15} color={Colors.danger} />
+            <Text style={[styles.actionBtnText, { color: Colors.danger }]}>Delete</Text>
           </TouchableOpacity>
         </View>
       </Card>
@@ -156,11 +235,11 @@ export default function ProductsScreen() {
     setModalVisible(true);
   };
 
-  const handleSave = async (name, price, quantity) => {
+  const handleSave = async (name, price, quantity, imageUri) => {
     if (editingProduct) {
-      await updateProduct(editingProduct.id, name, price, quantity);
+      await updateProduct(editingProduct.id, name, price, quantity, imageUri);
     } else {
-      await addProduct(name, price, quantity);
+      await addProduct(name, price, quantity, imageUri);
     }
     load();
   };
@@ -168,7 +247,7 @@ export default function ProductsScreen() {
   const handleDelete = (item) => {
     Alert.alert(
       'Delete Product',
-      `Remove "${item.name}" from inventory? This won't affect existing tab items.`,
+      `Remove "${item.name}" from inventory?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -194,9 +273,11 @@ export default function ProductsScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <Animated.View entering={FadeInDown.duration(300)} style={styles.listHeader}>
-            <Text style={styles.countText}>{products.length} product{products.length !== 1 ? 's' : ''}</Text>
-          </Animated.View>
+          products.length > 0 ? (
+            <Animated.View entering={FadeInDown.duration(300)} style={styles.listHeader}>
+              <Text style={styles.countText}>{products.length} product{products.length !== 1 ? 's' : ''}</Text>
+            </Animated.View>
+          ) : null
         }
         ListEmptyComponent={
           <EmptyState
@@ -209,7 +290,8 @@ export default function ProductsScreen() {
 
       <Animated.View entering={FadeInDown.delay(200)} style={styles.fab}>
         <TouchableOpacity style={styles.fabButton} onPress={handleAdd} activeOpacity={0.85}>
-          <Text style={styles.fabText}>+ Add Product</Text>
+          <Ionicons name="add" size={20} color={Colors.textInverse} />
+          <Text style={styles.fabText}>Add Product</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -228,33 +310,50 @@ const styles = StyleSheet.create({
   listContent: { padding: Spacing.md, paddingBottom: 100 },
   listHeader: { marginBottom: Spacing.sm },
   countText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+
   productCard: { marginBottom: Spacing.sm },
-  productRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  productLeft: { flex: 1, marginRight: Spacing.sm },
-  productName: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 3 },
-  productPrice: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
-  productRight: { alignItems: 'flex-end' },
+  productRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  productImage: { width: 56, height: 56, borderRadius: Radius.md, backgroundColor: Colors.surfaceAlt },
+  productImagePlaceholder: {
+    width: 56, height: 56, borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceAlt,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  productLeft: { flex: 1 },
+  productName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 3 },
+  productPrice: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+
   lowStockBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: Colors.warningLight,
     borderRadius: Radius.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 10, paddingVertical: 5,
     marginTop: 8,
   },
-  lowStockText: { fontSize: 12, color: Colors.warning, fontWeight: '600' },
-  productActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.borderLight },
-  actionBtn: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  deleteBtn: {},
+  lowStockText: { fontSize: 12, fontWeight: '600' },
+
+  productActions: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: Spacing.sm, paddingTop: Spacing.sm,
+    borderTopWidth: 1, borderTopColor: Colors.borderLight,
+  },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 4 },
+  actionDivider: { width: 1, height: 20, backgroundColor: Colors.borderLight },
   actionBtnText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+
   fab: { position: 'absolute', bottom: Spacing.lg, left: Spacing.md, right: Spacing.md },
   fabButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.lg,
     paddingVertical: 16,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     ...Shadow.lg,
   },
   fabText: { color: Colors.textInverse, fontSize: 16, fontWeight: '700' },
+
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
     backgroundColor: Colors.surface,
@@ -262,9 +361,26 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius.xl,
     padding: Spacing.lg,
     paddingBottom: 34,
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   modalHandle: { width: 40, height: 4, backgroundColor: Colors.border, borderRadius: 2, alignSelf: 'center', marginBottom: Spacing.md },
   modalTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
   modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+
+  imagePicker: { alignSelf: 'center', marginBottom: Spacing.lg, position: 'relative' },
+  imagePreview: { width: 100, height: 100, borderRadius: Radius.lg },
+  imagePlaceholder: {
+    width: 100, height: 100, borderRadius: Radius.lg,
+    backgroundColor: Colors.surfaceAlt,
+    borderWidth: 2, borderColor: Colors.border, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  imagePlaceholderText: { fontSize: 12, color: Colors.textMuted, fontWeight: '600' },
+  imageEditBadge: {
+    position: 'absolute', bottom: -4, right: -4,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: Colors.surface,
+  },
 });
