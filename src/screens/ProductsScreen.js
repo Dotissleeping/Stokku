@@ -41,11 +41,6 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   }, [visible, product]);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo access to add a product image.');
-      return;
-    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -60,7 +55,7 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow camera access to take a product photo.');
+      Alert.alert('Permission needed', 'Allow camera access in your phone settings.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -105,7 +100,6 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
           <Text style={styles.modalTitle}>{product ? 'Edit Product' : 'New Product'}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Image Picker */}
             <TouchableOpacity onPress={handleImagePress} style={styles.imagePicker} activeOpacity={0.8}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} />
@@ -163,7 +157,6 @@ const ProductItem = ({ item, onEdit, onDelete, index }) => {
     <Animated.View entering={FadeInRight.delay(index * 40).duration(300)} layout={Layout.springify()}>
       <Card style={styles.productCard}>
         <View style={styles.productRow}>
-          {/* Product Image or Placeholder */}
           {item.image_uri ? (
             <Image source={{ uri: item.image_uri }} style={styles.productImage} />
           ) : (
