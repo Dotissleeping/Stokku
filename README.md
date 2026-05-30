@@ -4,6 +4,16 @@ Stokku is a fully offline Android app for small business owners to manage produc
 
 ---
 
+## ⚠️ Compatibility Notes
+
+- **Minimum Android version:** Android 8.0 (API 26)
+- **Tested on:** Android 16 (armeabi-v7a / 32-bit)
+- **Architecture support:** `armeabi-v7a` (32-bit) and `arm64-v8a` (64-bit)
+- **Node.js required:** v20.x (v24 is not supported with Expo 51)
+- **expo-sqlite** does not run in standard Expo Go — use EAS Build or `npx expo run:android`
+
+---
+
 ## ✨ Features
 
 ### 🏠 Dashboard
@@ -40,19 +50,19 @@ Stokku is a fully offline Android app for small business owners to manage produc
 
 ## 🛠 Tech Stack
 
-| Layer | Library |
-|---|---|
-| Framework | React Native + Expo ~51 |
-| Database | expo-sqlite (local, offline) |
-| Navigation | React Navigation (Bottom Tabs + Native Stack) |
-| Animations | react-native-reanimated |
-| Gestures | react-native-gesture-handler |
-| Safe Area | react-native-safe-area-context |
-| Screens | react-native-screens |
-| Preferences | @react-native-async-storage/async-storage |
-| Gallery Save | expo-media-library |
-| Receipt Image | react-native-view-shot |
-| Build | EAS Build |
+| Layer | Library | Version |
+|---|---|---|
+| Framework | React Native + Expo | ~51 |
+| Database | expo-sqlite (local, offline) | ~14.0.6 |
+| Navigation | React Navigation (Bottom Tabs + Native Stack) | ^6 |
+| Animations | react-native-reanimated | 3.16.7 |
+| Gestures | react-native-gesture-handler | 2.21.2 |
+| Safe Area | react-native-safe-area-context | 4.10.1 |
+| Screens | react-native-screens | 3.31.1 |
+| Preferences | @react-native-async-storage/async-storage | 1.23.1 |
+| Gallery Save | expo-media-library | ~16.0.4 |
+| Receipt Image | react-native-view-shot | 3.8.0 |
+| Build | EAS Build | — |
 
 ---
 
@@ -91,27 +101,24 @@ Stokku/
 ## 🚀 Running Locally
 
 ### Prerequisites
-- Node.js 18+
-- Expo CLI: `npm install -g expo-cli`
-- Expo Go app on your Android device
+- Node.js **v20.x** (use [nvm-windows](https://github.com/coreybutler/nvm-windows) on Windows)
+- EAS CLI: `npm install -g eas-cli`
 
 ### Steps
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourusername/stokku.git
-cd stokku
+git clone https://github.com/Dotissleeping/Stokku.git
+cd Stokku
 
 # 2. Install dependencies
 npm install
 
 # 3. Start Expo dev server
 npx expo start
-
-# 4. Scan the QR code with Expo Go on your Android phone
 ```
 
-> **Note:** expo-sqlite requires a development build or bare workflow to run properly — it does **not** work inside standard Expo Go. Use `npx expo run:android` or build via EAS (see below).
+> **Note:** expo-sqlite requires a development build — it does **not** work inside standard Expo Go. Use EAS Build to generate a testable APK (see below).
 
 ---
 
@@ -127,23 +134,33 @@ npm install -g eas-cli
 eas login
 ```
 
-### 3. Configure your project
-```bash
-eas build:configure
-```
-> Update the `projectId` in `app.json` → `extra.eas.projectId` with your actual EAS project ID.
-
-### 4. Build a preview APK (for testing)
+### 3. Build a preview APK (for testing, no Play Store needed)
 ```bash
 eas build --platform android --profile preview
 ```
 
-### 5. Build production APK
+### 4. Build production APK
 ```bash
 eas build --platform android --profile production
 ```
 
-EAS will provide a download link for the `.apk` file when the build completes.
+EAS builds in the cloud and provides a download link for the `.apk` when done. Install it directly on your Android device.
+
+> **Tip:** If you're on Windows, make sure you're using Node 20. Node 24 is incompatible with Expo 51 and will cause `expo config` to silently fail.
+
+---
+
+## 🔧 Known Setup Issues & Fixes
+
+| Problem | Fix |
+|---|---|
+| `expo config --json` returns nothing | Remove `"expo-sqlite"` from `plugins` in `app.json` — it doesn't need a plugin entry |
+| `eas init` fails on Windows | Manually set `projectId` in `app.json` under `extra.eas.projectId` |
+| Slug mismatch error | Match `"slug"` in `app.json` to the slug shown on expo.dev |
+| Gradle build fails with `compileSdkVersion not specified` | Use `expo-sqlite@~14.0.6` via `npx expo install expo-sqlite` |
+| App crashes on Android 16 | Upgrade `react-native-reanimated` to `3.16.7` and `react-native-gesture-handler` to `2.21.2` |
+| App crashes on 32-bit devices | Add `"abiFilters": ["armeabi-v7a", "arm64-v8a"]` to the `android` section in `app.json` |
+| `node_modules` won't delete on Windows | Use `cmd /c "rmdir /s /q node_modules"` instead of `Remove-Item` |
 
 ---
 
