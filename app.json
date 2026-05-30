@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Stokku",
-    "slug": "stokku",
+    "slug": "stokku-",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -29,13 +29,6 @@
       ]
     },
     "plugins": [
-      [
-        "expo-sqlite",
-        {
-          "enableFTS": false,
-          "useSQLCipher": false
-        }
-      ],
       [
         "expo-media-library",
         {
