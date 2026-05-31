@@ -4,16 +4,6 @@ Stokku is a fully offline Android app for small business owners to manage produc
 
 ---
 
-## ⚠️ Compatibility Notes
-
-- **Minimum Android version:** Android 8.0 (API 26)
-- **Tested on:** Android 16 (armeabi-v7a / 32-bit)
-- **Architecture support:** `armeabi-v7a` (32-bit) and `arm64-v8a` (64-bit)
-- **Node.js required:** v20.x (v24 is not supported with Expo 51)
-- **expo-sqlite** does not run in standard Expo Go — use EAS Build or `npx expo run:android`
-
----
-
 ## ✨ Features
 
 ### 🏠 Dashboard
@@ -22,9 +12,10 @@ Stokku is a fully offline Android app for small business owners to manage produc
 - Low stock alerts (≤ 5 units highlighted)
 
 ### 📦 Products
-- Add, edit, delete products (name, price, quantity)
+- Add, edit, delete products (name, price, quantity, photo)
 - Stock auto-decrements when items are added to a customer tab
 - Low stock and out-of-stock indicators per item
+- Product photos from camera or gallery
 
 ### 👥 Customers
 - Add, edit, delete customers (name, phone optional, notes optional)
@@ -36,6 +27,7 @@ Stokku is a fully offline Android app for small business owners to manage produc
 - Running tab per customer — items stack and accumulate
 - Add items from inventory (auto-decrements stock)
 - Record partial or full payments anytime
+- Undo payments if entered incorrectly
 - Payment log with timestamps
 - Auto-computes: total bill, total paid, remaining balance
 - ✅ Marked complete when balance hits zero
@@ -50,25 +42,21 @@ Stokku is a fully offline Android app for small business owners to manage produc
 
 ## 🛠 Tech Stack
 
-| Layer | Library | Version |
+| | Library | Version |
 |---|---|---|
-| Framework | React Native + Expo | ~51 |
-| Database | expo-sqlite (local, offline) | ~14.0.6 |
-| Navigation | React Navigation (Bottom Tabs + Native Stack) | ^6 |
-| Animations | react-native-reanimated | 3.16.7 |
-| Gestures | react-native-gesture-handler | 2.21.2 |
-| Safe Area | react-native-safe-area-context | 4.10.1 |
-| Screens | react-native-screens | 3.31.1 |
-| Preferences | @react-native-async-storage/async-storage | 1.23.1 |
-| Gallery Save | expo-media-library | ~16.0.4 |
-| Receipt Image | react-native-view-shot | 3.8.0 |
-| Build | EAS Build | — |
+| <img src="https://img.shields.io/badge/-React_Native-61DAFB?logo=react&logoColor=black&style=flat" /> | React Native + Expo | ~52.0.0 |
+| <img src="https://img.shields.io/badge/-SQLite-003B57?logo=sqlite&logoColor=white&style=flat" /> | expo-sqlite | ~15.1.4 |
+| <img src="https://img.shields.io/badge/-React_Navigation-6B52AE?logo=react&logoColor=white&style=flat" /> | React Navigation | ^6 |
+| <img src="https://img.shields.io/badge/-Reanimated-764ABC?logo=react&logoColor=white&style=flat" /> | react-native-reanimated | ~3.16.1 |
+| <img src="https://img.shields.io/badge/-Gesture_Handler-FF6B6B?logo=react&logoColor=white&style=flat" /> | react-native-gesture-handler | ~2.20.2 |
+| <img src="https://img.shields.io/badge/-Expo_Image_Picker-000020?logo=expo&logoColor=white&style=flat" /> | expo-image-picker | ~16.0.6 |
+| <img src="https://img.shields.io/badge/-Expo_Media_Library-000020?logo=expo&logoColor=white&style=flat" /> | expo-media-library | ~17.0.6 |
+| <img src="https://img.shields.io/badge/-ViewShot-333333?logo=android&logoColor=white&style=flat" /> | react-native-view-shot | ~4.0.3 |
+| <img src="https://img.shields.io/badge/-EAS_Build-000020?logo=expo&logoColor=white&style=flat" /> | EAS Build | — |
 
 ---
 
 ## 📁 Folder Structure
-
-```
 Stokku/
 ├── assets/              # Icons, splash screen
 ├── src/
@@ -94,7 +82,6 @@ Stokku/
 ├── package.json
 ├── .gitignore
 └── README.md
-```
 
 ---
 
@@ -146,7 +133,7 @@ eas build --platform android --profile production
 
 EAS builds in the cloud and provides a download link for the `.apk` when done. Install it directly on your Android device.
 
-> **Tip:** If you're on Windows, make sure you're using Node 20. Node 24 is incompatible with Expo 51 and will cause `expo config` to silently fail.
+> **Tip:** On Windows, make sure you're using Node 20. Node 24 is incompatible with Expo 52 and will cause `expo config` to silently fail.
 
 ---
 
@@ -154,13 +141,12 @@ EAS builds in the cloud and provides a download link for the `.apk` when done. I
 
 | Problem | Fix |
 |---|---|
-| `expo config --json` returns nothing | Remove `"expo-sqlite"` from `plugins` in `app.json` — it doesn't need a plugin entry |
 | `eas init` fails on Windows | Manually set `projectId` in `app.json` under `extra.eas.projectId` |
 | Slug mismatch error | Match `"slug"` in `app.json` to the slug shown on expo.dev |
-| Gradle build fails with `compileSdkVersion not specified` | Use `expo-sqlite@~14.0.6` via `npx expo install expo-sqlite` |
-| App crashes on Android 16 | Upgrade `react-native-reanimated` to `3.16.7` and `react-native-gesture-handler` to `2.21.2` |
-| App crashes on 32-bit devices | Add `"abiFilters": ["armeabi-v7a", "arm64-v8a"]` to the `android` section in `app.json` |
-| `node_modules` won't delete on Windows | Use `cmd /c "rmdir /s /q node_modules"` instead of `Remove-Item` |
+| App crashes on 32-bit devices | Add `"abiFilters": ["armeabi-v7a", "arm64-v8a"]` to `android` in `app.json` |
+| `node_modules` won't delete on Windows | Use `cmd /c "rmdir /s /q node_modules"` |
+| Image picker not working | Uninstall app, reinstall fresh — permissions must be granted on first launch |
+| Camera not opening | Go to Settings → Apps → Stokku → Permissions → enable Camera |
 
 ---
 
@@ -173,6 +159,7 @@ EAS builds in the cloud and provides a download link for the `.apk` when done. I
 | name | TEXT |
 | price | REAL |
 | quantity | INTEGER |
+| image_uri | TEXT (optional) |
 | created_at | TEXT |
 
 ### `customers`
