@@ -9,6 +9,7 @@ import ProductsScreen from '../screens/ProductsScreen';
 import CustomersScreen from '../screens/CustomersScreen';
 import CustomerTabScreen from '../screens/CustomerTabScreen';
 import ReceiptScreen from '../screens/ReceiptScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import { Colors } from '../utils/theme';
 
 const Tab = createBottomTabNavigator();
@@ -31,21 +32,9 @@ function CustomerStack() {
         contentStyle: { backgroundColor: Colors.background },
       }}
     >
-      <Stack.Screen
-        name="CustomersList"
-        component={CustomersScreen}
-        options={{ title: 'Customers' }}
-      />
-      <Stack.Screen
-        name="CustomerTab"
-        component={CustomerTabScreen}
-        options={{ title: 'Tab' }}
-      />
-      <Stack.Screen
-        name="Receipt"
-        component={ReceiptScreen}
-        options={{ title: 'Receipt 🧾' }}
-      />
+      <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
+      <Stack.Screen name="CustomerTab" component={CustomerTabScreen} options={{ title: 'Tab' }} />
+      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt 🧾' }} />
     </Stack.Navigator>
   );
 }
@@ -61,11 +50,7 @@ function DashboardStack() {
         contentStyle: { backgroundColor: Colors.background },
       }}
     >
-      <Stack.Screen
-        name="DashboardHome"
-        component={DashboardScreen}
-        options={{ title: 'Stokku', headerShown: false }}
-      />
+      <Stack.Screen name="DashboardHome" component={DashboardScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -81,11 +66,23 @@ function ProductsStack() {
         contentStyle: { backgroundColor: Colors.background },
       }}
     >
-      <Stack.Screen
-        name="ProductsList"
-        component={ProductsScreen}
-        options={{ title: 'Products' }}
-      />
+      <Stack.Screen name="ProductsList" component={ProductsScreen} options={{ title: 'Products' }} />
+    </Stack.Navigator>
+  );
+}
+
+function SettingsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: Colors.surface },
+        headerTintColor: Colors.textPrimary,
+        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: Colors.background },
+      }}
+    >
+      <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings' }} />
     </Stack.Navigator>
   );
 }
@@ -131,6 +128,14 @@ export default function AppNavigator() {
           options={{
             tabBarLabel: 'Customers',
             tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
+          }}
+        />
+        <Tab.Screen
+          name="Settings"
+          component={SettingsStack}
+          options={{
+            tabBarLabel: 'Settings',
+            tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
           }}
         />
       </Tab.Navigator>
