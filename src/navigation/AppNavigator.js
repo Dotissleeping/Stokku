@@ -10,6 +10,7 @@ import CustomersScreen from '../screens/CustomersScreen';
 import CustomerTabScreen from '../screens/CustomerTabScreen';
 import ReceiptScreen from '../screens/ReceiptScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import RestockHistoryScreen from '../screens/RestockHistoryScreen';
 import { Colors } from '../utils/theme';
 
 const Tab = createBottomTabNavigator();
@@ -67,6 +68,7 @@ function ProductsStack() {
       }}
     >
       <Stack.Screen name="ProductsList" component={ProductsScreen} options={{ title: 'Products' }} />
+      <Stack.Screen name="RestockHistory" component={RestockHistoryScreen} options={{ title: 'Restock History' }} />
     </Stack.Navigator>
   );
 }
