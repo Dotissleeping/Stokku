@@ -15,6 +15,7 @@ import {
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { addProduct, deleteProduct, getProducts, updateProduct } from '../database/db';
 import { formatCurrency } from '../utils/formatters';
@@ -23,6 +24,18 @@ import { Badge, Button, Card, EmptyState, Input } from '../components/UI';
 
 const LOW_STOCK = 5;
 
+const copyToLocal = async (uri) => {
+  try {
+    const filename = uri.split('/').pop() || `img_${Date.now()}.jpg`;
+    const dest = FileSystem.documentDirectory + filename;
+    await FileSystem.copyAsync({ from: uri, to: dest });
+    return dest;
+  } catch (e) {
+    console.warn('File copy failed, using original URI', e);
+    return uri;
+  }
+};
+
 const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -30,7 +43,6 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   const [imageUri, setImageUri] = useState(null);
   const [errors, setErrors] = useState({});
   const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
-  const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
 
   React.useEffect(() => {
     if (visible) {
@@ -42,23 +54,16 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
     }
   }, [visible, product]);
 
-  const pickImage = async () => {
-    if (!mediaPermission?.granted) {
-      const { granted } = await requestMediaPermission();
-      if (!granted) {
-        Alert.alert('Permission needed', 'Allow photo access in your phone settings.');
-        return;
-      }
-    }
+  const pickFromFiles = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+      allowsEditing: false,
+      quality: 0.8,
       copyToCacheDirectory: true,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri);
+      const localUri = await copyToLocal(result.assets[0].uri);
+      setImageUri(localUri);
     }
   };
 
@@ -73,18 +78,19 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
-      quality: 0.7,
+      quality: 0.8,
       copyToCacheDirectory: true,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri);
+      const localUri = await copyToLocal(result.assets[0].uri);
+      setImageUri(localUri);
     }
   };
 
   const handleImagePress = () => {
     Alert.alert('Product Image', 'Choose an option', [
-      { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Choose from Gallery', onPress: pickImage },
+      { text: '📁 Browse Files', onPress: pickFromFiles },
+      { text: '📷 Take Photo', onPress: takePhoto },
       imageUri ? { text: 'Remove Image', style: 'destructive', onPress: () => setImageUri(null) } : null,
       { text: 'Cancel', style: 'cancel' },
     ].filter(Boolean));
