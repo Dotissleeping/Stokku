@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as ImagePicker from 'expo-image-picker';
 import { initDatabase } from './src/database/db';
 import AppNavigator from './src/navigation/AppNavigator';
 import { Colors } from './src/utils/theme';
@@ -15,6 +16,10 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
+        // Request permissions on startup
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+        await ImagePicker.requestCameraPermissionsAsync();
+        // Init database
         await initDatabase();
         setReady(true);
       } catch (e) {
