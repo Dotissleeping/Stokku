@@ -55,6 +55,7 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
+      copyToCacheDirectory: true,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImageUri(result.assets[0].uri);
@@ -71,9 +72,9 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsEditing: false,
       quality: 0.7,
+      copyToCacheDirectory: true,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImageUri(result.assets[0].uri);
