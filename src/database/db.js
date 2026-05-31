@@ -50,14 +50,22 @@ export const initDatabase = async () => {
       date TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS restocks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL,
+      product_name TEXT NOT NULL,
+      quantity_added INTEGER NOT NULL DEFAULT 0,
+      cost REAL NOT NULL DEFAULT 0,
+      date TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    );
   `);
 
-  // Migration: add image_uri column if it doesn't exist yet
+  // Migrations
   try {
     await database.execAsync(`ALTER TABLE products ADD COLUMN image_uri TEXT;`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
+  } catch (e) {}
 };
 
 // ─── PRODUCTS ────────────────────────────────────────────────────────────────
@@ -111,6 +119,41 @@ export const getLowStockProducts = async (threshold = 5) => {
     'SELECT * FROM products WHERE quantity <= ? ORDER BY quantity ASC',
     [threshold]
   );
+};
+
+// ─── RESTOCKS ────────────────────────────────────────────────────────────────
+
+export const addRestock = async (productId, productName, quantityAdded, cost) => {
+  const database = await getDb();
+  await incrementStock(productId, quantityAdded);
+  const result = await database.runAsync(
+    'INSERT INTO restocks (product_id, product_name, quantity_added, cost) VALUES (?, ?, ?, ?)',
+    [productId, productName, parseInt(quantityAdded), parseFloat(cost)]
+  );
+  return result.lastInsertRowId;
+};
+
+export const getRestocks = async () => {
+  const database = await getDb();
+  return await database.getAllAsync(
+    'SELECT * FROM restocks ORDER BY date DESC'
+  );
+};
+
+export const getRestocksByProduct = async (productId) => {
+  const database = await getDb();
+  return await database.getAllAsync(
+    'SELECT * FROM restocks WHERE product_id = ? ORDER BY date DESC',
+    [productId]
+  );
+};
+
+export const getTotalRestockCost = async () => {
+  const database = await getDb();
+  const result = await database.getFirstAsync(
+    'SELECT COALESCE(SUM(cost), 0) as total FROM restocks'
+  );
+  return result?.total || 0;
 };
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
@@ -256,10 +299,17 @@ export const getDashboardStats = async () => {
   `);
 
   const lowStock = await getLowStockProducts(5);
+  const totalRestockCost = await getTotalRestockCost();
+  const totalCollected = await database.getFirstAsync(
+    'SELECT COALESCE(SUM(amount), 0) as total FROM payments'
+  );
 
   return {
     totalReceivables: totalReceivables?.total || 0,
     unpaidCount: unpaidCount?.count || 0,
     lowStock,
+    totalRestockCost,
+    totalCollected: totalCollected?.total || 0,
+    estimatedProfit: (totalCollected?.total || 0) - totalRestockCost,
   };
 };
