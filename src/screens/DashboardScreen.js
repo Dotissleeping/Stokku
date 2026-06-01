@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,14 @@ import { Colors, Radius, Shadow, Spacing } from '../utils/theme';
 import { Badge, Card, SectionHeader } from '../components/UI';
 
 export default function DashboardScreen({ navigation }) {
-  const [stats, setStats] = useState({ totalReceivables: 0, unpaidCount: 0, lowStock: [] });
+  const [stats, setStats] = useState({
+    totalReceivables: 0,
+    unpaidCount: 0,
+    lowStock: [],
+    totalRestockCost: 0,
+    totalCollected: 0,
+    estimatedProfit: 0,
+  });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = async () => {
@@ -27,11 +34,7 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      loadStats();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { loadStats(); }, []));
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -71,6 +74,34 @@ export default function DashboardScreen({ navigation }) {
         </View>
       </Animated.View>
 
+      {/* Profit Summary */}
+      <Animated.View entering={FadeInDown.delay(120).duration(400)}>
+        <View style={styles.profitRow}>
+          <View style={[styles.profitCard, { backgroundColor: Colors.successLight }]}>
+            <Text style={styles.profitLabel}>Collected</Text>
+            <Text style={[styles.profitValue, { color: Colors.success }]}>
+              {formatCurrency(stats.totalCollected)}
+            </Text>
+          </View>
+          <View style={[styles.profitCard, { backgroundColor: Colors.dangerLight }]}>
+            <Text style={styles.profitLabel}>Restock Cost</Text>
+            <Text style={[styles.profitValue, { color: Colors.danger }]}>
+              {formatCurrency(stats.totalRestockCost)}
+            </Text>
+          </View>
+          <View style={[styles.profitCard, {
+            backgroundColor: stats.estimatedProfit >= 0 ? Colors.primaryLight : Colors.dangerLight
+          }]}>
+            <Text style={styles.profitLabel}>Est. Profit</Text>
+            <Text style={[styles.profitValue, {
+              color: stats.estimatedProfit >= 0 ? Colors.primary : Colors.danger
+            }]}>
+              {formatCurrency(stats.estimatedProfit)}
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
+
       {/* Quick Stats */}
       <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.statsRow}>
         <TouchableOpacity
@@ -91,6 +122,16 @@ export default function DashboardScreen({ navigation }) {
           <Text style={styles.statEmoji}>⚠️</Text>
           <Text style={[styles.statValue, { color: Colors.danger }]}>{stats.lowStock.length}</Text>
           <Text style={styles.statLabel}>Low Stock</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={() => navigation.navigate('Stats')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.statEmoji}>📊</Text>
+          <Text style={[styles.statValue, { color: Colors.success }]}>Stats</Text>
+          <Text style={styles.statLabel}>View Sales</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -140,34 +181,12 @@ export default function DashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
-  header: {
-    marginBottom: Spacing.lg,
-    marginTop: Spacing.sm,
-  },
-  greeting: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  appName: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  subheading: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.md, paddingBottom: Spacing.xxl },
+  header: { marginBottom: Spacing.lg, marginTop: Spacing.sm },
+  greeting: { fontSize: 14, color: Colors.textSecondary, marginBottom: 2 },
+  appName: { fontSize: 32, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  subheading: { fontSize: 14, color: Colors.textMuted, marginTop: 2 },
   heroCard: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.xl,
@@ -177,120 +196,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Shadow.lg,
   },
-  heroCardInner: {
-    flex: 1,
-  },
+  heroCardInner: { flex: 1 },
   heroLabel: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 6,
+    fontSize: 13, color: 'rgba(255,255,255,0.75)',
+    fontWeight: '600', letterSpacing: 0.5,
+    textTransform: 'uppercase', marginBottom: 6,
   },
   heroAmount: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: Colors.textInverse,
-    letterSpacing: -1,
-    marginBottom: 12,
+    fontSize: 36, fontWeight: '800',
+    color: Colors.textInverse, letterSpacing: -1, marginBottom: 12,
   },
-  heroRow: {
-    flexDirection: 'row',
-  },
+  heroRow: { flexDirection: 'row' },
   heroPill: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: Radius.full,
   },
-  heroPillText: {
-    fontSize: 12,
-    color: Colors.textInverse,
-    fontWeight: '600',
-  },
-  heroEmoji: {
-    fontSize: 52,
-    marginLeft: Spacing.sm,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    alignItems: 'center',
-    ...Shadow.sm,
-  },
-  statEmoji: {
-    fontSize: 24,
-    marginBottom: 6,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  seeAll: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  lowStockCard: {
-    marginBottom: Spacing.md,
-    padding: 0,
-    overflow: 'hidden',
-  },
-  lowStockItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+  heroPillText: { fontSize: 12, color: Colors.textInverse, fontWeight: '600' },
+  heroEmoji: { fontSize: 52, marginLeft: Spacing.sm },
+
+  profitRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  profitCard: {
+    flex: 1, borderRadius: Radius.lg,
+    padding: Spacing.sm, alignItems: 'center',
     paddingVertical: 12,
   },
-  lowStockLeft: {
-    flex: 1,
-    marginRight: Spacing.sm,
+  profitLabel: { fontSize: 10, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  profitValue: { fontSize: 14, fontWeight: '800' },
+
+  statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+  statCard: {
+    flex: 1, backgroundColor: Colors.surface,
+    borderRadius: Radius.lg, padding: Spacing.md,
+    alignItems: 'center', ...Shadow.sm,
   },
-  lowStockName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textPrimary,
+  statEmoji: { fontSize: 24, marginBottom: 6 },
+  statValue: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
+  statLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600', textAlign: 'center' },
+
+  seeAll: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+  lowStockCard: { marginBottom: Spacing.md, padding: 0, overflow: 'hidden' },
+  lowStockItem: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: 12,
   },
-  lowStockPrice: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  itemDivider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-  },
-  allGoodCard: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-  },
-  allGoodEmoji: {
-    fontSize: 36,
-    marginBottom: 8,
-  },
-  allGoodTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  allGoodSub: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
+  lowStockLeft: { flex: 1, marginRight: Spacing.sm },
+  lowStockName: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
+  lowStockPrice: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  itemDivider: { height: 1, backgroundColor: Colors.borderLight },
+  allGoodCard: { alignItems: 'center', paddingVertical: Spacing.lg },
+  allGoodEmoji: { fontSize: 36, marginBottom: 8 },
+  allGoodTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
+  allGoodSub: { fontSize: 13, color: Colors.textSecondary },
 });

@@ -11,6 +11,7 @@ import CustomerTabScreen from '../screens/CustomerTabScreen';
 import ReceiptScreen from '../screens/ReceiptScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import RestockHistoryScreen from '../screens/RestockHistoryScreen';
+import StatsScreen from '../screens/StatsScreen';
 import { Colors } from '../utils/theme';
 
 const Tab = createBottomTabNavigator();
@@ -21,24 +22,6 @@ const TabIcon = ({ emoji, focused }) => (
     <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
   </View>
 );
-
-function CustomerStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
-      }}
-    >
-      <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
-      <Stack.Screen name="CustomerTab" component={CustomerTabScreen} options={{ title: 'Tab' }} />
-      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt 🧾' }} />
-    </Stack.Navigator>
-  );
-}
 
 function DashboardStack() {
   return (
@@ -52,6 +35,7 @@ function DashboardStack() {
       }}
     >
       <Stack.Screen name="DashboardHome" component={DashboardScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Sales Statistics' }} />
     </Stack.Navigator>
   );
 }
@@ -69,6 +53,24 @@ function ProductsStack() {
     >
       <Stack.Screen name="ProductsList" component={ProductsScreen} options={{ title: 'Products' }} />
       <Stack.Screen name="RestockHistory" component={RestockHistoryScreen} options={{ title: 'Restock History' }} />
+    </Stack.Navigator>
+  );
+}
+
+function CustomerStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: Colors.surface },
+        headerTintColor: Colors.textPrimary,
+        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: Colors.background },
+      }}
+    >
+      <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
+      <Stack.Screen name="CustomerTab" component={CustomerTabScreen} options={{ title: 'Tab' }} />
+      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt 🧾' }} />
     </Stack.Navigator>
   );
 }
