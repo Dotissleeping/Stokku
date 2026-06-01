@@ -9,6 +9,8 @@ import ProductsScreen from '../screens/ProductsScreen';
 import CustomersScreen from '../screens/CustomersScreen';
 import CustomerTabScreen from '../screens/CustomerTabScreen';
 import ReceiptScreen from '../screens/ReceiptScreen';
+import ReceiptHistoryScreen from '../screens/ReceiptHistoryScreen';
+import ReceiptHistoryDetailScreen from '../screens/ReceiptHistoryDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import RestockHistoryScreen from '../screens/RestockHistoryScreen';
 import StatsScreen from '../screens/StatsScreen';
@@ -71,6 +73,8 @@ function CustomerStack() {
       <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
       <Stack.Screen name="CustomerTab" component={CustomerTabScreen} options={{ title: 'Tab' }} />
       <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt 🧾' }} />
+      <Stack.Screen name="ReceiptHistory" component={ReceiptHistoryScreen} options={{ title: 'Receipt History' }} />
+      <Stack.Screen name="ReceiptHistoryDetail" component={ReceiptHistoryDetailScreen} options={{ title: 'Receipt' }} />
     </Stack.Navigator>
   );
 }

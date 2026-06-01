@@ -60,6 +60,18 @@ export const initDatabase = async () => {
       date TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS receipt_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      customer_name TEXT NOT NULL,
+      snapshot TEXT NOT NULL,
+      total_bill REAL NOT NULL DEFAULT 0,
+      total_paid REAL NOT NULL DEFAULT 0,
+      balance REAL NOT NULL DEFAULT 0,
+      date TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    );
   `);
 
   // Migrations
@@ -135,9 +147,7 @@ export const addRestock = async (productId, productName, quantityAdded, cost) =>
 
 export const getRestocks = async () => {
   const database = await getDb();
-  return await database.getAllAsync(
-    'SELECT * FROM restocks ORDER BY date DESC'
-  );
+  return await database.getAllAsync('SELECT * FROM restocks ORDER BY date DESC');
 };
 
 export const getRestocksByProduct = async (productId) => {
@@ -154,6 +164,37 @@ export const getTotalRestockCost = async () => {
     'SELECT COALESCE(SUM(cost), 0) as total FROM restocks'
   );
   return result?.total || 0;
+};
+
+// ─── RECEIPT SNAPSHOTS ───────────────────────────────────────────────────────
+
+export const saveReceiptSnapshot = async (customerId, customerName, tabItems, payments, totalBill, totalPaid, balance) => {
+  const database = await getDb();
+  const snapshot = JSON.stringify({ tabItems, payments });
+  await database.runAsync(
+    'INSERT INTO receipt_snapshots (customer_id, customer_name, snapshot, total_bill, total_paid, balance) VALUES (?, ?, ?, ?, ?, ?)',
+    [customerId, customerName, snapshot, totalBill, totalPaid, balance]
+  );
+};
+
+export const getReceiptSnapshots = async () => {
+  const database = await getDb();
+  return await database.getAllAsync(
+    'SELECT * FROM receipt_snapshots ORDER BY date DESC'
+  );
+};
+
+export const getReceiptSnapshotsByCustomer = async (customerId) => {
+  const database = await getDb();
+  return await database.getAllAsync(
+    'SELECT * FROM receipt_snapshots WHERE customer_id = ? ORDER BY date DESC',
+    [customerId]
+  );
+};
+
+export const deleteReceiptSnapshot = async (id) => {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM receipt_snapshots WHERE id = ?', [id]);
 };
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
