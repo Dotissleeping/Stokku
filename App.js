@@ -7,19 +7,21 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import { initDatabase } from './src/database/db';
 import AppNavigator from './src/navigation/AppNavigator';
-import { Colors } from './src/utils/theme';
+import { ThemeProvider, useTheme } from './src/utils/ThemeContext';
+import { DarkColors, LightColors } from './src/utils/theme';
 
-export default function App() {
+function Root() {
+  const { isDark } = useTheme();
+  const Colors = isDark ? DarkColors : LightColors;
+
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        // Request permissions on startup
         await ImagePicker.requestMediaLibraryPermissionsAsync();
         await ImagePicker.requestCameraPermissionsAsync();
-        // Init database
         await initDatabase();
         setReady(true);
       } catch (e) {
@@ -31,18 +33,18 @@ export default function App() {
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>⚠️ Failed to load database</Text>
-        <Text style={styles.errorSub}>{error}</Text>
+      <View style={[styles.center, { backgroundColor: Colors.background }]}>
+        <Text style={[styles.errorText, { color: Colors.danger }]}>⚠️ Failed to load database</Text>
+        <Text style={[styles.errorSub, { color: Colors.textSecondary }]}>{error}</Text>
       </View>
     );
   }
 
   if (!ready) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: Colors.background }]}>
         <Text style={styles.splashLogo}>🛒</Text>
-        <Text style={styles.splashTitle}>Stokku</Text>
+        <Text style={[styles.splashTitle, { color: Colors.textPrimary }]}>Stokku</Text>
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
       </View>
     );
@@ -51,23 +53,25 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" backgroundColor="transparent" translucent={false} />
+        <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor="transparent" translucent={false} />
         <AppNavigator />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
+export default function App() {
+  return (
+    <ThemeProvider>
+      <Root />
+    </ThemeProvider>
+  );
+}
+
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   splashLogo: { fontSize: 64, marginBottom: 12 },
-  splashTitle: { fontSize: 36, fontWeight: '900', color: Colors.textPrimary, letterSpacing: -1 },
-  errorText: { fontSize: 18, fontWeight: '700', color: Colors.danger, marginBottom: 8 },
-  errorSub: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  splashTitle: { fontSize: 36, fontWeight: '900', letterSpacing: -1 },
+  errorText: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  errorSub: { fontSize: 13, textAlign: 'center' },
 });

@@ -1,19 +1,15 @@
 import React, { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Share,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Share } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters';
-import { Colors, Radius, Shadow, Spacing } from '../utils/theme';
+import { DarkColors, LightColors, Radius, Shadow, Spacing } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 import { Button } from '../components/UI';
 
 export default function ReceiptHistoryDetailScreen({ route }) {
+  const { isDark } = useTheme();
+  const Colors = isDark ? DarkColors : LightColors;
   const { snapshot, customerName, totalBill, totalPaid, balance, date } = route.params;
   const { tabItems, payments } = snapshot;
   const viewShotRef = useRef(null);
@@ -23,36 +19,21 @@ export default function ReceiptHistoryDetailScreen({ route }) {
     try {
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission required', 'Allow gallery access to save receipt.');
-        return;
-      }
+      if (status !== 'granted') { Alert.alert('Permission required', 'Allow gallery access to save receipt.'); return; }
       const uri = await viewShotRef.current.capture();
       await MediaLibrary.saveToLibraryAsync(uri);
       Alert.alert('✅ Saved!', 'Receipt saved to your gallery.');
-    } catch (e) {
-      Alert.alert('Error', 'Could not save receipt.');
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { Alert.alert('Error', 'Could not save receipt.'); }
+    finally { setSaving(false); }
   };
 
   const handleShare = async () => {
     try {
       setSaving(true);
       const uri = await viewShotRef.current.capture();
-      await Share.share({
-        url: uri,
-        title: `Receipt - ${customerName}`,
-        message: `Receipt for ${customerName}\nTotal: ${formatCurrency(totalBill)}\nBalance: ${formatCurrency(balance)}`,
-      });
-    } catch (e) {
-      if (e.message !== 'User did not share') {
-        Alert.alert('Error', 'Could not share receipt.');
-      }
-    } finally {
-      setSaving(false);
-    }
+      await Share.share({ url: uri, title: `Receipt - ${customerName}`, message: `Receipt for ${customerName}\nTotal: ${formatCurrency(totalBill)}\nBalance: ${formatCurrency(balance)}` });
+    } catch (e) { if (e.message !== 'User did not share') Alert.alert('Error', 'Could not share receipt.'); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -66,7 +47,6 @@ export default function ReceiptHistoryDetailScreen({ route }) {
               <View style={styles.receiptDivider} />
               <Text style={styles.receiptCustomer}>{customerName}</Text>
             </View>
-
             <View style={styles.receiptSection}>
               <Text style={styles.receiptSectionTitle}>ITEMS</Text>
               {tabItems.map((item, i) => (
@@ -79,28 +59,25 @@ export default function ReceiptHistoryDetailScreen({ route }) {
                 </View>
               ))}
             </View>
-
             <Text style={styles.dotted}>- - - - - - - - - - - - - - - - - -</Text>
-
             <View style={styles.receiptTotals}>
               <View style={styles.receiptTotalRow}>
                 <Text style={styles.receiptTotalLabel}>Total Bill</Text>
                 <Text style={styles.receiptTotalValue}>{formatCurrency(totalBill)}</Text>
               </View>
               <View style={styles.receiptTotalRow}>
-                <Text style={[styles.receiptTotalLabel, { color: Colors.success }]}>Total Paid</Text>
-                <Text style={[styles.receiptTotalValue, { color: Colors.success }]}>{formatCurrency(totalPaid)}</Text>
+                <Text style={[styles.receiptTotalLabel, { color: '#2DD4BF' }]}>Total Paid</Text>
+                <Text style={[styles.receiptTotalValue, { color: '#2DD4BF' }]}>{formatCurrency(totalPaid)}</Text>
               </View>
               <View style={[styles.receiptTotalRow, styles.receiptBalanceRow]}>
-                <Text style={[styles.receiptTotalLabel, { fontSize: 16, fontWeight: '800', color: balance > 0 ? Colors.danger : Colors.success }]}>
+                <Text style={[styles.receiptTotalLabel, { fontSize: 16, fontWeight: '800', color: balance > 0 ? '#EF4444' : '#2DD4BF' }]}>
                   {balance > 0 ? 'Balance Due' : 'Fully Paid ✅'}
                 </Text>
-                <Text style={[styles.receiptTotalValue, { fontSize: 20, color: balance > 0 ? Colors.danger : Colors.success }]}>
+                <Text style={[styles.receiptTotalValue, { fontSize: 20, color: balance > 0 ? '#EF4444' : '#2DD4BF' }]}>
                   {formatCurrency(balance)}
                 </Text>
               </View>
             </View>
-
             {payments.length > 0 && (
               <View style={styles.receiptSection}>
                 <Text style={styles.receiptSectionTitle}>PAYMENT HISTORY</Text>
@@ -112,18 +89,15 @@ export default function ReceiptHistoryDetailScreen({ route }) {
                 ))}
               </View>
             )}
-
             <Text style={styles.dotted}>- - - - - - - - - - - - - - - - - -</Text>
             <Text style={styles.receiptFooter}>Generated by Stokku</Text>
             <Text style={styles.receiptFooterSub}>Thank you! 🙏</Text>
           </View>
         </ViewShot>
-
         <View style={styles.actions}>
           <Button title="💾 Save to Gallery" onPress={handleSave} loading={saving} style={styles.actionBtn} />
           <Button title="📤 Share" variant="secondary" onPress={handleShare} loading={saving} style={styles.actionBtn} />
         </View>
-
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </View>
@@ -135,28 +109,28 @@ const styles = StyleSheet.create({
   receiptWrapper: { borderRadius: Radius.xl, overflow: 'hidden', ...Shadow.lg },
   receipt: { backgroundColor: '#FFFEF5', borderRadius: Radius.xl, padding: Spacing.lg },
   receiptHeader: { alignItems: 'center', marginBottom: Spacing.md },
-  receiptStoreName: { fontSize: 24, fontWeight: '900', color: Colors.textPrimary },
-  receiptDate: { fontSize: 12, color: Colors.textMuted, marginTop: 4, marginBottom: 12 },
-  receiptDivider: { height: 1, backgroundColor: Colors.border, width: '100%', marginBottom: 12 },
-  receiptCustomer: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
+  receiptStoreName: { fontSize: 24, fontWeight: '900', color: '#1E1B3A' },
+  receiptDate: { fontSize: 12, color: '#9B99B0', marginTop: 4, marginBottom: 12 },
+  receiptDivider: { height: 1, backgroundColor: '#E5E4F0', width: '100%', marginBottom: 12 },
+  receiptCustomer: { fontSize: 20, fontWeight: '800', color: '#1E1B3A' },
   receiptSection: { marginVertical: Spacing.sm },
-  receiptSectionTitle: { fontSize: 10, fontWeight: '800', color: Colors.textMuted, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
+  receiptSectionTitle: { fontSize: 10, fontWeight: '800', color: '#9B99B0', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
   receiptItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
   receiptItemLeft: { flex: 1 },
-  receiptItemName: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-  receiptItemQty: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  receiptItemTotal: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  dotted: { textAlign: 'center', color: Colors.border, fontSize: 13, letterSpacing: 2, marginVertical: Spacing.sm },
+  receiptItemName: { fontSize: 14, fontWeight: '600', color: '#1E1B3A' },
+  receiptItemQty: { fontSize: 12, color: '#6B6882', marginTop: 2 },
+  receiptItemTotal: { fontSize: 14, fontWeight: '700', color: '#1E1B3A' },
+  dotted: { textAlign: 'center', color: '#E5E4F0', fontSize: 13, letterSpacing: 2, marginVertical: Spacing.sm },
   receiptTotals: { marginVertical: Spacing.sm },
   receiptTotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  receiptTotalLabel: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600' },
-  receiptTotalValue: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  receiptBalanceRow: { backgroundColor: Colors.primaryLight, borderRadius: Radius.sm, paddingHorizontal: 10, paddingVertical: 8, marginTop: 4 },
+  receiptTotalLabel: { fontSize: 14, color: '#6B6882', fontWeight: '600' },
+  receiptTotalValue: { fontSize: 15, fontWeight: '700', color: '#1E1B3A' },
+  receiptBalanceRow: { backgroundColor: '#E8E7FF', borderRadius: Radius.sm, paddingHorizontal: 10, paddingVertical: 8, marginTop: 4 },
   receiptPayRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  receiptPayDate: { fontSize: 13, color: Colors.textSecondary },
-  receiptPayAmt: { fontSize: 13, fontWeight: '700', color: Colors.success },
-  receiptFooter: { textAlign: 'center', fontSize: 12, color: Colors.textMuted, marginTop: 4, fontWeight: '600' },
-  receiptFooterSub: { textAlign: 'center', fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  receiptPayDate: { fontSize: 13, color: '#6B6882' },
+  receiptPayAmt: { fontSize: 13, fontWeight: '700', color: '#2DD4BF' },
+  receiptFooter: { textAlign: 'center', fontSize: 12, color: '#9B99B0', marginTop: 4, fontWeight: '600' },
+  receiptFooterSub: { textAlign: 'center', fontSize: 12, color: '#9B99B0', marginTop: 2 },
   actions: { marginTop: Spacing.lg, gap: Spacing.sm },
   actionBtn: { width: '100%' },
 });

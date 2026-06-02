@@ -1,8 +1,10 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useTheme } from '../utils/ThemeContext';
+import { DarkColors, LightColors } from '../utils/theme';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ProductsScreen from '../screens/ProductsScreen';
@@ -14,7 +16,6 @@ import ReceiptHistoryDetailScreen from '../screens/ReceiptHistoryDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import RestockHistoryScreen from '../screens/RestockHistoryScreen';
 import StatsScreen from '../screens/StatsScreen';
-import { Colors } from '../utils/theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -25,51 +26,45 @@ const TabIcon = ({ emoji, focused }) => (
   </View>
 );
 
-function DashboardStack() {
+function DashboardStack({ Colors }) {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
-      }}
-    >
+    <Stack.Navigator screenOptions={{
+      headerStyle: { backgroundColor: Colors.surface },
+      headerTintColor: Colors.textPrimary,
+      headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: Colors.background },
+    }}>
       <Stack.Screen name="DashboardHome" component={DashboardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Sales Statistics' }} />
     </Stack.Navigator>
   );
 }
 
-function ProductsStack() {
+function ProductsStack({ Colors }) {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
-      }}
-    >
+    <Stack.Navigator screenOptions={{
+      headerStyle: { backgroundColor: Colors.surface },
+      headerTintColor: Colors.textPrimary,
+      headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: Colors.background },
+    }}>
       <Stack.Screen name="ProductsList" component={ProductsScreen} options={{ title: 'Products' }} />
       <Stack.Screen name="RestockHistory" component={RestockHistoryScreen} options={{ title: 'Restock History' }} />
     </Stack.Navigator>
   );
 }
 
-function CustomerStack() {
+function CustomerStack({ Colors }) {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
-      }}
-    >
+    <Stack.Navigator screenOptions={{
+      headerStyle: { backgroundColor: Colors.surface },
+      headerTintColor: Colors.textPrimary,
+      headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: Colors.background },
+    }}>
       <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
       <Stack.Screen name="CustomerTab" component={CustomerTabScreen} options={{ title: 'Tab' }} />
       <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt 🧾' }} />
@@ -79,25 +74,37 @@ function CustomerStack() {
   );
 }
 
-function SettingsStack() {
+function SettingsStack({ Colors }) {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.background },
-      }}
-    >
+    <Stack.Navigator screenOptions={{
+      headerStyle: { backgroundColor: Colors.surface },
+      headerTintColor: Colors.textPrimary,
+      headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: Colors.background },
+    }}>
       <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings' }} />
     </Stack.Navigator>
   );
 }
 
 export default function AppNavigator() {
+  const { isDark } = useTheme();
+  const Colors = isDark ? DarkColors : LightColors;
+
+  const navTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      background: Colors.background,
+      card: Colors.surface,
+      text: Colors.textPrimary,
+      border: Colors.border,
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
@@ -116,36 +123,40 @@ export default function AppNavigator() {
       >
         <Tab.Screen
           name="Dashboard"
-          component={DashboardStack}
           options={{
             tabBarLabel: 'Dashboard',
             tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
           }}
-        />
+        >
+          {() => <DashboardStack Colors={Colors} />}
+        </Tab.Screen>
         <Tab.Screen
           name="Products"
-          component={ProductsStack}
           options={{
             tabBarLabel: 'Products',
             tabBarIcon: ({ focused }) => <TabIcon emoji="📦" focused={focused} />,
           }}
-        />
+        >
+          {() => <ProductsStack Colors={Colors} />}
+        </Tab.Screen>
         <Tab.Screen
           name="Customers"
-          component={CustomerStack}
           options={{
             tabBarLabel: 'Customers',
             tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
           }}
-        />
+        >
+          {() => <CustomerStack Colors={Colors} />}
+        </Tab.Screen>
         <Tab.Screen
           name="Settings"
-          component={SettingsStack}
           options={{
             tabBarLabel: 'Settings',
             tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
           }}
-        />
+        >
+          {() => <SettingsStack Colors={Colors} />}
+        </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );

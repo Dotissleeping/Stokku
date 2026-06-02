@@ -1,42 +1,55 @@
-export const Colors = {
-  // Brand
+export const LightColors = {
   primary: '#6C63FF',
   primaryDark: '#5A52D5',
   primaryLight: '#E8E7FF',
-
-  // Accent
   accent: '#FF6584',
   accentLight: '#FFE8ED',
-
-  // Success
   success: '#2DD4BF',
   successLight: '#E6FAF8',
-
-  // Warning
   warning: '#F59E0B',
   warningLight: '#FEF3C7',
-
-  // Danger
   danger: '#EF4444',
   dangerLight: '#FEE2E2',
-
-  // Neutrals
   background: '#F8F7FF',
   surface: '#FFFFFF',
   surfaceAlt: '#F3F2FF',
   border: '#E5E4F0',
   borderLight: '#F0EFF8',
-
-  // Text
   textPrimary: '#1E1B3A',
   textSecondary: '#6B6882',
   textMuted: '#9B99B0',
   textInverse: '#FFFFFF',
-
-  // Tab bar
   tabActive: '#6C63FF',
   tabInactive: '#9B99B0',
 };
+
+export const DarkColors = {
+  primary: '#7C73FF',
+  primaryDark: '#6A62E8',
+  primaryLight: '#2A2750',
+  accent: '#FF6584',
+  accentLight: '#3D1F27',
+  success: '#2DD4BF',
+  successLight: '#0D3330',
+  warning: '#F59E0B',
+  warningLight: '#3D2E00',
+  danger: '#EF4444',
+  dangerLight: '#3D1010',
+  background: '#0F0E1A',
+  surface: '#1A1828',
+  surfaceAlt: '#221F35',
+  border: '#2E2B45',
+  borderLight: '#252338',
+  textPrimary: '#F0EEFF',
+  textSecondary: '#9D9BB8',
+  textMuted: '#6B6882',
+  textInverse: '#FFFFFF',
+  tabActive: '#7C73FF',
+  tabInactive: '#6B6882',
+};
+
+// Default export for backward compatibility
+export const Colors = LightColors;
 
 export const Spacing = {
   xs: 4,
