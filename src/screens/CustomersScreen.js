@@ -227,11 +227,14 @@ export default function CustomersScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          filtered.length > 0 ? (
-            <View style={styles.listHeader}>
-              <Text style={styles.countText}>{filtered.length} customer{filtered.length !== 1 ? 's' : ''}</Text>
-            </View>
-          ) : null
+          <View style={styles.listHeader}>
+            <Text style={styles.countText}>
+              {filtered.length} customer{filtered.length !== 1 ? 's' : ''}
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('ReceiptHistory')}>
+              <Text style={styles.historyLink}>🧾 Receipt History →</Text>
+            </TouchableOpacity>
+          </View>
         }
         ListEmptyComponent={
           <EmptyState
@@ -271,17 +274,20 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   listContent: { paddingHorizontal: Spacing.md, paddingBottom: 100 },
-  listHeader: { marginBottom: Spacing.sm },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
   countText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  historyLink: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   customerCard: { marginBottom: Spacing.sm, padding: Spacing.md },
   customerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: Spacing.sm },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     marginRight: Spacing.sm,
   },
   avatarText: { fontSize: 18, fontWeight: '800', color: Colors.primary },
