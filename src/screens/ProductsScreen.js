@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   Alert, Modal, KeyboardAvoidingView, Platform,
-  ScrollView, Image, TextInput,
+  ScrollView, Image,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,6 +28,8 @@ const copyToLocal = async (uri) => {
   }
 };
 
+// ─── Restock Modal ────────────────────────────────────────────────────────────
+
 const RestockModal = ({ visible, product, onClose, onRestock }) => {
   const { isDark } = useTheme();
   const Colors = isDark ? DarkColors : LightColors;
@@ -50,7 +52,7 @@ const RestockModal = ({ visible, product, onClose, onRestock }) => {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
-        <View style={[styles.modalSheet, { backgroundColor: Colors.surface, maxHeight: 360 }]}>
+        <View style={[styles.modalSheet, { backgroundColor: Colors.surface, maxHeight: '75%' }]}>
           <View style={[styles.modalHandle, { backgroundColor: Colors.border }]} />
           <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Restock</Text>
           {product && <Text style={[styles.restockProductName, { color: Colors.textSecondary }]}>{product.name}</Text>}
@@ -66,12 +68,15 @@ const RestockModal = ({ visible, product, onClose, onRestock }) => {
   );
 };
 
+// ─── Product Form Modal ───────────────────────────────────────────────────────
+
 const ProductFormModal = ({ visible, product, onClose, onSave }) => {
   const { isDark } = useTheme();
   const Colors = isDark ? DarkColors : LightColors;
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [initialCost, setInitialCost] = useState('');
   const [imageUri, setImageUri] = useState(null);
   const [errors, setErrors] = useState({});
   const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
@@ -81,6 +86,7 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
       setName(product?.name || '');
       setPrice(product?.price?.toString() || '');
       setQuantity(product?.quantity?.toString() || '');
+      setInitialCost('');
       setImageUri(product?.image_uri || null);
       setErrors({});
     }
@@ -130,16 +136,18 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
 
   const handleSave = async () => {
     if (!validate()) return;
-    await onSave(name.trim(), parseFloat(price), parseInt(quantity), imageUri);
+    await onSave(name.trim(), parseFloat(price), parseInt(quantity), imageUri, parseFloat(initialCost) || 0);
     onClose();
   };
+
+  const isEditing = !!product;
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
         <View style={[styles.modalSheet, { backgroundColor: Colors.surface }]}>
           <View style={[styles.modalHandle, { backgroundColor: Colors.border }]} />
-          <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>{product ? 'Edit Product' : 'New Product'}</Text>
+          <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>{isEditing ? 'Edit Product' : 'New Product'}</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
             <TouchableOpacity onPress={handleImagePress} style={styles.imagePicker} activeOpacity={0.8}>
               {imageUri ? (
@@ -155,18 +163,29 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
               </View>
             </TouchableOpacity>
             <Input label="Product Name" value={name} onChangeText={setName} placeholder="e.g. Coca-Cola 1L" error={errors.name} />
-            <Input label="Price (₱)" value={price} onChangeText={setPrice} placeholder="0.00" keyboardType="decimal-pad" error={errors.price} />
+            <Input label="Price per Unit (₱)" value={price} onChangeText={setPrice} placeholder="0.00" keyboardType="decimal-pad" error={errors.price} />
             <Input label="Stock Quantity" value={quantity} onChangeText={setQuantity} placeholder="0" keyboardType="number-pad" error={errors.quantity} />
+            {!isEditing && (
+              <Input
+                label="Initial Stock Cost (₱)"
+                value={initialCost}
+                onChangeText={setInitialCost}
+                placeholder="0.00 — how much you paid for this stock"
+                keyboardType="decimal-pad"
+              />
+            )}
           </ScrollView>
           <View style={styles.modalActions}>
             <Button title="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-            <Button title={product ? 'Save Changes' : 'Add Product'} onPress={handleSave} style={{ flex: 2 }} />
+            <Button title={isEditing ? 'Save Changes' : 'Add Product'} onPress={handleSave} style={{ flex: 2 }} />
           </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
   );
 };
+
+// ─── Product Item ─────────────────────────────────────────────────────────────
 
 const ProductItem = ({ item, onEdit, onDelete, onRestock, index }) => {
   const { isDark } = useTheme();
@@ -226,6 +245,8 @@ const ProductItem = ({ item, onEdit, onDelete, onRestock, index }) => {
   );
 };
 
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
 export default function ProductsScreen({ navigation }) {
   const { isDark } = useTheme();
   const Colors = isDark ? DarkColors : LightColors;
@@ -244,11 +265,15 @@ export default function ProductsScreen({ navigation }) {
     load();
   };
 
-  const handleSave = async (name, price, quantity, imageUri) => {
+  const handleSave = async (name, price, quantity, imageUri, initialCost) => {
     if (editingProduct) {
       await updateProduct(editingProduct.id, name, price, quantity, imageUri);
     } else {
-      await addProduct(name, price, quantity, imageUri);
+      const productId = await addProduct(name, price, quantity, imageUri);
+      // Log initial stock as a restock entry if cost was provided
+      if (initialCost > 0 && quantity > 0) {
+        await addRestock(productId, name, quantity, initialCost);
+      }
     }
     load();
   };
@@ -293,14 +318,28 @@ export default function ProductsScreen({ navigation }) {
       />
 
       <Animated.View entering={FadeInDown.delay(200)} style={styles.fab}>
-        <TouchableOpacity style={[styles.fabButton, { backgroundColor: Colors.primary }]} onPress={() => { setEditingProduct(null); setModalVisible(true); }} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={[styles.fabButton, { backgroundColor: Colors.primary }]}
+          onPress={() => { setEditingProduct(null); setModalVisible(true); }}
+          activeOpacity={0.85}
+        >
           <Ionicons name="add" size={20} color="#FFFFFF" />
           <Text style={styles.fabText}>Add Product</Text>
         </TouchableOpacity>
       </Animated.View>
 
-      <ProductFormModal visible={modalVisible} product={editingProduct} onClose={() => setModalVisible(false)} onSave={handleSave} />
-      <RestockModal visible={restockModalVisible} product={restockingProduct} onClose={() => setRestockModalVisible(false)} onRestock={handleRestockSave} />
+      <ProductFormModal
+        visible={modalVisible}
+        product={editingProduct}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
+      />
+      <RestockModal
+        visible={restockModalVisible}
+        product={restockingProduct}
+        onClose={() => setRestockModalVisible(false)}
+        onRestock={handleRestockSave}
+      />
     </View>
   );
 }
