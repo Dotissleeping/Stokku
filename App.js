@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { View, Text, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
@@ -34,6 +34,8 @@ function Root() {
   if (error) {
     return (
       <View style={[styles.center, { backgroundColor: Colors.background }]}>
+        <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={Colors.background} translucent={false} />
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
         <Text style={[styles.errorText, { color: Colors.danger }]}>⚠️ Failed to load database</Text>
         <Text style={[styles.errorSub, { color: Colors.textSecondary }]}>{error}</Text>
       </View>
@@ -43,6 +45,8 @@ function Root() {
   if (!ready) {
     return (
       <View style={[styles.center, { backgroundColor: Colors.background }]}>
+        <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={Colors.background} translucent={false} />
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
         <Text style={styles.splashLogo}>🛒</Text>
         <Text style={[styles.splashTitle, { color: Colors.textPrimary }]}>Stokku</Text>
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
@@ -53,7 +57,15 @@ function Root() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor="transparent" translucent={false} />
+        <ExpoStatusBar
+          style={isDark ? 'light' : 'dark'}
+          backgroundColor={Colors.surface}
+          translucent={false}
+        />
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={Colors.surface}
+        />
         <AppNavigator />
       </SafeAreaProvider>
     </GestureHandlerRootView>
