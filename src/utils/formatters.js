@@ -5,8 +5,9 @@ export const formatCurrency = (amount) => {
 
 export const formatDate = (dateStr) => {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-PH', {
+  // SQLite stores datetime('now') in UTC — convert to local time
+  const date = new Date(dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T') + 'Z');
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -15,8 +16,9 @@ export const formatDate = (dateStr) => {
 
 export const formatDateTime = (dateStr) => {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-PH', {
+  // SQLite stores datetime('now') in UTC — convert to local time
+  const date = new Date(dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T') + 'Z');
+  return date.toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
