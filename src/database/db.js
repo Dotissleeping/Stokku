@@ -76,8 +76,8 @@ export const initDatabase = async () => {
 
   // Migrations
   try {
-    await database.execAsync(`ALTER TABLE products ADD COLUMN image_uri TEXT;`);
-  } catch (e) {}
+    await database.execAsync(`ALTER TABLE customers ADD COLUMN image_uri TEXT;`);
+    } catch (e) {}
 };
 
 // ─── PRODUCTS ────────────────────────────────────────────────────────────────
@@ -226,20 +226,20 @@ export const getCustomerById = async (id) => {
   `, [id]);
 };
 
-export const addCustomer = async (name, phone, note) => {
+export const addCustomer = async (name, phone, note, imageUri = null) => {
   const database = await getDb();
   const result = await database.runAsync(
-    'INSERT INTO customers (name, phone, note) VALUES (?, ?, ?)',
-    [name, phone || null, note || null]
+    'INSERT INTO customers (name, phone, note, image_uri) VALUES (?, ?, ?, ?)',
+    [name, phone || null, note || null, imageUri]
   );
   return result.lastInsertRowId;
 };
 
-export const updateCustomer = async (id, name, phone, note) => {
+export const updateCustomer = async (id, name, phone, note, imageUri = null) => {
   const database = await getDb();
   await database.runAsync(
-    'UPDATE customers SET name = ?, phone = ?, note = ? WHERE id = ?',
-    [name, phone || null, note || null, id]
+    'UPDATE customers SET name = ?, phone = ?, note = ?, image_uri = ? WHERE id = ?',
+    [name, phone || null, note || null, imageUri, id]
   );
 };
 

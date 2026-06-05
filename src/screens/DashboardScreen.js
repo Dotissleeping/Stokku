@@ -1,14 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  RefreshControl,
-  TouchableOpacity,
+  View, Text, ScrollView, StyleSheet,
+  RefreshControl, TouchableOpacity,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { getDashboardStats } from '../database/db';
 import { formatCurrency } from '../utils/formatters';
 import { DarkColors, LightColors, Radius, Shadow, Spacing } from '../utils/theme';
@@ -20,20 +17,14 @@ export default function DashboardScreen({ navigation }) {
   const Colors = isDark ? DarkColors : LightColors;
 
   const [stats, setStats] = useState({
-    totalReceivables: 0,
-    unpaidCount: 0,
-    lowStock: [],
-    totalRestockCost: 0,
-    totalCollected: 0,
-    estimatedProfit: 0,
+    totalReceivables: 0, unpaidCount: 0, lowStock: [],
+    totalRestockCost: 0, totalCollected: 0, estimatedProfit: 0,
   });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = async () => {
-    try {
-      const data = await getDashboardStats();
-      setStats(data);
-    } catch (e) { console.error(e); }
+    try { const data = await getDashboardStats(); setStats(data); }
+    catch (e) { console.error(e); }
   };
 
   useFocusEffect(useCallback(() => { loadStats(); }, []));
@@ -51,12 +42,14 @@ export default function DashboardScreen({ navigation }) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       showsVerticalScrollIndicator={false}
     >
+      {/* Header */}
       <Animated.View entering={FadeInDown.delay(0).duration(400)} style={styles.header}>
-        <Text style={[styles.greeting, { color: Colors.textSecondary }]}>Good day! 👋</Text>
+        <Text style={[styles.greeting, { color: Colors.textSecondary }]}>Good day!</Text>
         <Text style={[styles.appName, { color: Colors.textPrimary }]}>Stokku</Text>
         <Text style={[styles.subheading, { color: Colors.textMuted }]}>Your business at a glance</Text>
       </Animated.View>
 
+      {/* Hero Card */}
       <Animated.View entering={FadeInDown.delay(80).duration(400)}>
         <View style={[styles.heroCard, { backgroundColor: Colors.primary }]}>
           <View style={styles.heroCardInner}>
@@ -70,51 +63,76 @@ export default function DashboardScreen({ navigation }) {
               </View>
             </View>
           </View>
-          <Text style={styles.heroEmoji}>💰</Text>
+          <Ionicons name="wallet-outline" size={48} color="rgba(255,255,255,0.3)" />
         </View>
       </Animated.View>
 
+      {/* Profit Cards — all tappable */}
       <Animated.View entering={FadeInDown.delay(120).duration(400)}>
         <View style={styles.profitRow}>
-          <View style={[styles.profitCard, { backgroundColor: Colors.successLight }]}>
+          <TouchableOpacity
+            style={[styles.profitCard, { backgroundColor: Colors.successLight }]}
+            onPress={() => navigation.navigate('Stats')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cash-outline" size={16} color={Colors.success} style={{ marginBottom: 4 }} />
             <Text style={[styles.profitLabel, { color: Colors.textSecondary }]}>Collected</Text>
             <Text style={[styles.profitValue, { color: Colors.success }]}>{formatCurrency(stats.totalCollected)}</Text>
-          </View>
-          <View style={[styles.profitCard, { backgroundColor: Colors.dangerLight }]}>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.profitCard, { backgroundColor: Colors.dangerLight }]}
+            onPress={() => navigation.navigate('Products', { screen: 'RestockHistory' })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-down-circle-outline" size={16} color={Colors.danger} style={{ marginBottom: 4 }} />
             <Text style={[styles.profitLabel, { color: Colors.textSecondary }]}>Restock Cost</Text>
             <Text style={[styles.profitValue, { color: Colors.danger }]}>{formatCurrency(stats.totalRestockCost)}</Text>
-          </View>
-          <View style={[styles.profitCard, { backgroundColor: stats.estimatedProfit >= 0 ? Colors.primaryLight : Colors.dangerLight }]}>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.profitCard, { backgroundColor: stats.estimatedProfit >= 0 ? Colors.primaryLight : Colors.dangerLight }]}
+            onPress={() => navigation.navigate('Stats')}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={stats.estimatedProfit >= 0 ? 'trending-up-outline' : 'trending-down-outline'}
+              size={16}
+              color={stats.estimatedProfit >= 0 ? Colors.primary : Colors.danger}
+              style={{ marginBottom: 4 }}
+            />
             <Text style={[styles.profitLabel, { color: Colors.textSecondary }]}>Est. Profit</Text>
             <Text style={[styles.profitValue, { color: stats.estimatedProfit >= 0 ? Colors.primary : Colors.danger }]}>
               {formatCurrency(stats.estimatedProfit)}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </Animated.View>
 
+      {/* Quick Stats */}
       <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.statsRow}>
         <TouchableOpacity style={[styles.statCard, { backgroundColor: Colors.surface }]} onPress={() => navigation.navigate('Customers')} activeOpacity={0.85}>
-          <Text style={styles.statEmoji}>👥</Text>
+          <Ionicons name="people-outline" size={24} color={Colors.primary} style={{ marginBottom: 6 }} />
           <Text style={[styles.statValue, { color: Colors.primary }]}>{stats.unpaidCount}</Text>
           <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Unpaid Tabs</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.statCard, { backgroundColor: Colors.surface }]} onPress={() => navigation.navigate('Products')} activeOpacity={0.85}>
-          <Text style={styles.statEmoji}>⚠️</Text>
+          <Ionicons name="warning-outline" size={24} color={Colors.danger} style={{ marginBottom: 6 }} />
           <Text style={[styles.statValue, { color: Colors.danger }]}>{stats.lowStock.length}</Text>
           <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Low Stock</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.statCard, { backgroundColor: Colors.surface }]} onPress={() => navigation.navigate('Stats')} activeOpacity={0.85}>
-          <Text style={styles.statEmoji}>📊</Text>
+          <Ionicons name="bar-chart-outline" size={24} color={Colors.success} style={{ marginBottom: 6 }} />
           <Text style={[styles.statValue, { color: Colors.success }]}>Stats</Text>
           <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>View Sales</Text>
         </TouchableOpacity>
       </Animated.View>
 
+      {/* Low Stock */}
       {stats.lowStock.length > 0 && (
         <Animated.View entering={FadeInDown.delay(240).duration(400)}>
           <SectionHeader
-            title="⚠️  Low Stock Alert"
+            title="Low Stock Alert"
             right={
               <TouchableOpacity onPress={() => navigation.navigate('Products')}>
                 <Text style={[styles.seeAll, { color: Colors.primary }]}>Manage →</Text>
@@ -145,7 +163,7 @@ export default function DashboardScreen({ navigation }) {
       {stats.lowStock.length === 0 && (
         <Animated.View entering={FadeInDown.delay(240).duration(400)}>
           <Card style={styles.allGoodCard}>
-            <Text style={styles.allGoodEmoji}>✅</Text>
+            <Ionicons name="checkmark-circle-outline" size={40} color={Colors.success} style={{ marginBottom: 8 }} />
             <Text style={[styles.allGoodTitle, { color: Colors.textPrimary }]}>All stocked up!</Text>
             <Text style={[styles.allGoodSub, { color: Colors.textSecondary }]}>No low-stock items right now.</Text>
           </Card>
@@ -169,14 +187,12 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row' },
   heroPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.full },
   heroPillText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
-  heroEmoji: { fontSize: 52, marginLeft: Spacing.sm },
   profitRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
   profitCard: { flex: 1, borderRadius: Radius.lg, padding: Spacing.sm, alignItems: 'center', paddingVertical: 12 },
   profitLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   profitValue: { fontSize: 14, fontWeight: '800' },
   statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
   statCard: { flex: 1, borderRadius: Radius.lg, padding: Spacing.md, alignItems: 'center', ...Shadow.sm },
-  statEmoji: { fontSize: 24, marginBottom: 6 },
   statValue: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
   statLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
   seeAll: { fontSize: 13, fontWeight: '600' },
@@ -187,7 +203,6 @@ const styles = StyleSheet.create({
   lowStockPrice: { fontSize: 12, marginTop: 2 },
   itemDivider: { height: 1 },
   allGoodCard: { alignItems: 'center', paddingVertical: Spacing.lg },
-  allGoodEmoji: { fontSize: 36, marginBottom: 8 },
   allGoodTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
   allGoodSub: { fontSize: 13 },
 });
