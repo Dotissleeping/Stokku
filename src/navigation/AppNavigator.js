@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../utils/ThemeContext';
 import { DarkColors, LightColors } from '../utils/theme';
 
@@ -19,12 +20,6 @@ import StatsScreen from '../screens/StatsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-const TabIcon = ({ emoji, focused }) => (
-  <View style={{ alignItems: 'center' }}>
-    <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
-  </View>
-);
 
 function DashboardStack({ Colors }) {
   return (
@@ -67,7 +62,7 @@ function CustomerStack({ Colors }) {
     }}>
       <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
       <Stack.Screen name="CustomerTab" component={CustomerTabScreen} options={{ title: 'Tab' }} />
-      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt 🧾' }} />
+      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
       <Stack.Screen name="ReceiptHistory" component={ReceiptHistoryScreen} options={{ title: 'Receipt History' }} />
       <Stack.Screen name="ReceiptHistoryDetail" component={ReceiptHistoryDetailScreen} options={{ title: 'Receipt' }} />
     </Stack.Navigator>
@@ -125,7 +120,7 @@ export default function AppNavigator() {
           name="Dashboard"
           options={{
             tabBarLabel: 'Dashboard',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size || 22} color={color} />,
           }}
         >
           {() => <DashboardStack Colors={Colors} />}
@@ -134,7 +129,7 @@ export default function AppNavigator() {
           name="Products"
           options={{
             tabBarLabel: 'Products',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="📦" focused={focused} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" size={size || 22} color={color} />,
           }}
         >
           {() => <ProductsStack Colors={Colors} />}
@@ -143,7 +138,7 @@ export default function AppNavigator() {
           name="Customers"
           options={{
             tabBarLabel: 'Customers',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size || 22} color={color} />,
           }}
         >
           {() => <CustomerStack Colors={Colors} />}
@@ -152,7 +147,7 @@ export default function AppNavigator() {
           name="Settings"
           options={{
             tabBarLabel: 'Settings',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size || 22} color={color} />,
           }}
         >
           {() => <SettingsStack Colors={Colors} />}

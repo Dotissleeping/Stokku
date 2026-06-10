@@ -71,7 +71,7 @@ export default function StatsScreen() {
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(160).duration(300)}>
-        <SectionHeader title={`📅 ${data?.label || ''}`} />
+        <SectionHeader title={data?.label || ''} />
         {!data?.sales?.length ? (
           <Card style={styles.emptyCard}><Text style={[styles.emptyText, { color: Colors.textMuted }]}>No sales data yet</Text></Card>
         ) : (
@@ -93,7 +93,7 @@ export default function StatsScreen() {
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(240).duration(300)} style={{ marginTop: Spacing.lg }}>
-        <SectionHeader title="🏆 Top Products" />
+        <SectionHeader title=" Top Products" />
         {!data?.topProducts?.length ? (
           <Card style={styles.emptyCard}><Text style={[styles.emptyText, { color: Colors.textMuted }]}>No product sales yet</Text></Card>
         ) : (

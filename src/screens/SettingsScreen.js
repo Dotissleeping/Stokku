@@ -61,7 +61,7 @@ export default function SettingsScreen() {
   const handleImport = async () => {
     Alert.alert(
       'Import Backup',
-      '⚠️ This will REPLACE all current data. Cannot be undone.',
+      'This will REPLACE all current data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -73,7 +73,7 @@ export default function SettingsScreen() {
             setImporting(false);
             if (result.canceled) return;
             if (result.success) {
-              Alert.alert('✅ Import Successful', 'Your data has been restored.');
+              Alert.alert('Import Successful', 'Your data has been restored.');
             } else {
               Alert.alert('Import Failed', result.error || 'Invalid backup file.');
             }
@@ -95,7 +95,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: Colors.surface }]}>
           <View style={styles.settingRow}>
             <View style={[styles.settingIcon, { backgroundColor: Colors.primary + '20' }]}>
-              <Ionicons name={isDark ? 'moon' : 'sunny'} size={22} color={Colors.primary} />
+              <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={22} color={Colors.primary} />
             </View>
             <View style={styles.settingText}>
               <Text style={[styles.settingTitle, { color: Colors.textPrimary }]}>Dark Mode</Text>

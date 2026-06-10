@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { deleteReceiptSnapshot, getReceiptSnapshots } from '../database/db';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { DarkColors, LightColors, Radius, Spacing } from '../utils/theme';
@@ -60,17 +61,23 @@ export default function ReceiptHistoryScreen({ navigation }) {
               </TouchableOpacity>
               <View style={[styles.cardActions, { borderTopColor: Colors.borderLight }]}>
                 <TouchableOpacity onPress={() => handleView(item)} style={styles.actionBtn}>
-                  <Text style={[styles.actionBtnText, { color: Colors.primary }]}>👁 View</Text>
+                  <Ionicons name="eye-outline" size={14} color={Colors.primary} />
+                  <Text style={[styles.actionBtnText, { color: Colors.primary }]}>View</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>
-                  <Text style={[styles.actionBtnText, { color: Colors.danger }]}>🗑 Delete</Text>
+                  <Ionicons name="trash-outline" size={14} color={Colors.danger} />
+                  <Text style={[styles.actionBtnText, { color: Colors.danger }]}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </Card>
           </Animated.View>
         )}
         ListEmptyComponent={
-          <EmptyState icon="🧾" title="No receipt history yet" subtitle="Receipts are saved automatically when you record a payment." />
+          <EmptyState
+            icon="🧾"
+            title="No receipt history yet"
+            subtitle="Receipts are saved automatically when you record a payment."
+          />
         }
       />
     </View>
@@ -90,6 +97,6 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
   statusText: { fontSize: 11, fontWeight: '700' },
   cardActions: { flexDirection: 'row', borderTopWidth: 1, marginTop: Spacing.sm, paddingTop: Spacing.sm },
-  actionBtn: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4 },
   actionBtnText: { fontSize: 13, fontWeight: '600' },
 });
