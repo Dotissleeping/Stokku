@@ -9,7 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
-import { addProduct, addRestock, deleteProduct, getProducts, updateProduct } from '../database/db';
+import { addProduct, addRestock, deleteProduct, getDb, getProducts, updateProduct } from '../database/db';
 import { formatCurrency } from '../utils/formatters';
 import { DarkColors, LightColors, Radius, Shadow, Spacing } from '../utils/theme';
 import { useTheme } from '../utils/ThemeContext';
@@ -118,8 +118,8 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
 
   const handleImagePress = () => {
     Alert.alert('Product Image', 'Choose an option', [
-      { text: '📁 Browse Files', onPress: pickFromFiles },
-      { text: '📷 Take Photo', onPress: takePhoto },
+      { text: 'Browse Files', onPress: pickFromFiles },
+      { text: 'Take Photo', onPress: takePhoto },
       imageUri ? { text: 'Remove Image', style: 'destructive', onPress: () => setImageUri(null) } : null,
       { text: 'Cancel', style: 'cancel' },
     ].filter(Boolean));
@@ -167,10 +167,10 @@ const ProductFormModal = ({ visible, product, onClose, onSave }) => {
             <Input label="Stock Quantity" value={quantity} onChangeText={setQuantity} placeholder="0" keyboardType="number-pad" error={errors.quantity} />
             {!isEditing && (
               <Input
-                label="Initial Stock Cost (₱)"
+                label="Cost per Unit (₱) — optional"
                 value={initialCost}
                 onChangeText={setInitialCost}
-                placeholder="0.00 — how much you paid for this stock"
+                placeholder="0.00 — cost price per piece"
                 keyboardType="decimal-pad"
               />
             )}
@@ -270,9 +270,13 @@ export default function ProductsScreen({ navigation }) {
       await updateProduct(editingProduct.id, name, price, quantity, imageUri);
     } else {
       const productId = await addProduct(name, price, quantity, imageUri);
-      // Log initial stock as a restock entry if cost was provided
+      // Log initial stock cost directly without incrementing stock again
       if (initialCost > 0 && quantity > 0) {
-        await addRestock(productId, name, quantity, initialCost);
+        const database = await getDb();
+        await database.runAsync(
+          'INSERT INTO restocks (product_id, product_name, quantity_added, cost) VALUES (?, ?, ?, ?)',
+          [productId, name, quantity, initialCost * quantity]
+        );
       }
     }
     load();
@@ -328,18 +332,8 @@ export default function ProductsScreen({ navigation }) {
         </TouchableOpacity>
       </Animated.View>
 
-      <ProductFormModal
-        visible={modalVisible}
-        product={editingProduct}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSave}
-      />
-      <RestockModal
-        visible={restockModalVisible}
-        product={restockingProduct}
-        onClose={() => setRestockModalVisible(false)}
-        onRestock={handleRestockSave}
-      />
+      <ProductFormModal visible={modalVisible} product={editingProduct} onClose={() => setModalVisible(false)} onSave={handleSave} />
+      <RestockModal visible={restockModalVisible} product={restockingProduct} onClose={() => setRestockModalVisible(false)} onRestock={handleRestockSave} />
     </View>
   );
 }

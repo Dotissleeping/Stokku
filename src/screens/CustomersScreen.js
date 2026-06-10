@@ -1,8 +1,8 @@
-  import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   Alert, Modal, KeyboardAvoidingView, Platform, TextInput,
-  ScrollView, Image,
+  ScrollView, Image, Animated as RNAnimated,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -21,10 +21,10 @@ const copyToLocal = async (uri) => {
     const dest = FileSystem.documentDirectory + filename;
     await FileSystem.copyAsync({ from: uri, to: dest });
     return dest;
-  } catch (e) {
-    return uri;
-  }
+  } catch (e) { return uri; }
 };
+
+// ─── Customer Form Modal ──────────────────────────────────────────────────────
 
 const CustomerFormModal = ({ visible, customer, onClose, onSave }) => {
   const { isDark } = useTheme();
@@ -99,7 +99,6 @@ const CustomerFormModal = ({ visible, customer, onClose, onSave }) => {
           <View style={[styles.modalHandle, { backgroundColor: Colors.border }]} />
           <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>{customer ? 'Edit Customer' : 'New Customer'}</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Profile Photo Picker */}
             <TouchableOpacity onPress={handleImagePress} style={styles.avatarPicker} activeOpacity={0.8}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.avatarPreview} />
@@ -112,7 +111,6 @@ const CustomerFormModal = ({ visible, customer, onClose, onSave }) => {
                 <Ionicons name="pencil" size={12} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
-
             <Input label="Customer Name" value={name} onChangeText={setName} placeholder="e.g. Juan Dela Cruz" error={errors.name} autoFocus />
             <Input label="Phone Number (optional)" value={phone} onChangeText={setPhone} placeholder="09XX XXX XXXX" keyboardType="phone-pad" />
             <Input label="Notes (optional)" value={note} onChangeText={setNote} placeholder="Any notes..." multiline numberOfLines={3} />
@@ -126,6 +124,8 @@ const CustomerFormModal = ({ visible, customer, onClose, onSave }) => {
     </Modal>
   );
 };
+
+// ─── Customer Item ────────────────────────────────────────────────────────────
 
 const CustomerItem = ({ item, onPress, onEdit, onDelete, index }) => {
   const { isDark } = useTheme();
@@ -193,6 +193,33 @@ const CustomerItem = ({ item, onPress, onEdit, onDelete, index }) => {
   );
 };
 
+// ─── Undo Toast ───────────────────────────────────────────────────────────────
+
+const UndoToast = ({ visible, message, onUndo, Colors }) => {
+  const opacity = useRef(new RNAnimated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      RNAnimated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    } else {
+      RNAnimated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    }
+  }, [visible]);
+
+  if (!visible && opacity._value === 0) return null;
+
+  return (
+    <RNAnimated.View style={[styles.toast, { backgroundColor: Colors.textPrimary, opacity }]}>
+      <Text style={[styles.toastText, { color: Colors.textInverse }]}>{message}</Text>
+      <TouchableOpacity onPress={onUndo} style={[styles.toastUndo, { backgroundColor: Colors.primary }]}>
+        <Text style={[styles.toastUndoText, { color: Colors.textInverse }]}>Undo</Text>
+      </TouchableOpacity>
+    </RNAnimated.View>
+  );
+};
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
 export default function CustomersScreen({ navigation }) {
   const { isDark } = useTheme();
   const Colors = isDark ? DarkColors : LightColors;
@@ -200,6 +227,9 @@ export default function CustomersScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [deletedCustomer, setDeletedCustomer] = useState(null);
+  const undoTimerRef = useRef(null);
 
   const load = async () => { const data = await getCustomers(); setCustomers(data); };
   useFocusEffect(useCallback(() => { load(); }, []));
@@ -216,10 +246,31 @@ export default function CustomersScreen({ navigation }) {
   };
 
   const handleDelete = (item) => {
-    Alert.alert('Delete Customer', `Remove "${item.name}"? This will also delete their tab and payment history.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteCustomer(item.id); load(); } },
-    ]);
+    // Store deleted customer data for undo
+    setDeletedCustomer(item);
+    // Remove from list immediately
+    setCustomers(prev => prev.filter(c => c.id !== item.id));
+    setToastVisible(true);
+
+    // Clear any existing timer
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+
+    // After 4 seconds, actually delete from DB
+    undoTimerRef.current = setTimeout(async () => {
+      await deleteCustomer(item.id);
+      setToastVisible(false);
+      setDeletedCustomer(null);
+      load();
+    }, 4000);
+  };
+
+  const handleUndo = () => {
+    // Cancel the deletion
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setToastVisible(false);
+    setDeletedCustomer(null);
+    // Restore to list
+    load();
   };
 
   return (
@@ -281,6 +332,13 @@ export default function CustomersScreen({ navigation }) {
         </TouchableOpacity>
       </Animated.View>
 
+      <UndoToast
+        visible={toastVisible}
+        message={`"${deletedCustomer?.name}" deleted`}
+        onUndo={handleUndo}
+        Colors={Colors}
+      />
+
       <CustomerFormModal
         visible={modalVisible}
         customer={editingCustomer}
@@ -331,4 +389,8 @@ const styles = StyleSheet.create({
   avatarPreview: { width: 90, height: 90, borderRadius: 45 },
   avatarPlaceholder: { width: 90, height: 90, borderRadius: 45, alignItems: 'center', justifyContent: 'center' },
   avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  toast: { position: 'absolute', bottom: 90, left: Spacing.md, right: Spacing.md, borderRadius: Radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: 12, ...Shadow.lg },
+  toastText: { fontSize: 14, fontWeight: '600', flex: 1 },
+  toastUndo: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: Radius.full, marginLeft: Spacing.sm },
+  toastUndoText: { fontSize: 13, fontWeight: '700' },
 });
