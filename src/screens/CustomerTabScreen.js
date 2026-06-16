@@ -7,6 +7,7 @@ import {
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import {
   addPayment, addTabItem, decrementStock, deletePayment,
@@ -17,6 +18,20 @@ import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { DarkColors, LightColors, Radius, Shadow, Spacing } from '../utils/theme';
 import { useTheme } from '../utils/ThemeContext';
 import { Button, Card, Divider, SectionHeader } from '../components/UI';
+
+// ─── Sound Helper ─────────────────────────────────────────────────────────────
+
+const playSound = async (soundFile) => {
+  try {
+    const { sound } = await Audio.Sound.createAsync(soundFile);
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (status.didJustFinish) sound.unloadAsync();
+    });
+  } catch (e) {
+    console.log('Sound error:', e);
+  }
+};
 
 // ─── Barcode Scanner Modal ────────────────────────────────────────────────────
 
@@ -52,25 +67,25 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
     lastScannedRef.current = data;
     setLastScanned(data);
 
-    // Find product by SKU
     const database = await getDb();
     const product = await database.getFirstAsync(
       'SELECT * FROM products WHERE sku = ?', [data]
     );
 
     if (!product) {
-      Vibration.vibrate([0, 100, 50, 100]); // double vibrate = not found
+      Vibration.vibrate([0, 100, 50, 100]);
       Alert.alert('Not Found', `No product with barcode: ${data}`);
       setTimeout(() => { cooldownRef.current = false; }, 2000);
       return;
     }
 
-    Vibration.vibrate(80); // single short vibrate = found
+    // Play beep sound on successful scan
+    await playSound(require('../../assets/sounds/beep.mp3'));
+    Vibration.vibrate(80);
 
     setScannedItems(prev => {
       const existing = prev.find(i => i.id === product.id);
       if (existing) {
-        // Check stock
         if (existing.quantity + 1 > product.quantity) {
           Alert.alert('Insufficient Stock', `Only ${product.quantity} in stock.`);
           return prev;
@@ -84,7 +99,6 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
       return [...prev, { ...product, quantity: 1 }];
     });
 
-    // Cooldown before next scan
     setTimeout(() => { cooldownRef.current = false; }, 1500);
   };
 
@@ -116,8 +130,6 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={[scanStyles.container, { backgroundColor: Colors.background }]}>
-
-        {/* Header */}
         <View style={[scanStyles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.border }]}>
           <TouchableOpacity onPress={onClose} style={scanStyles.closeBtn}>
             <Ionicons name="close" size={24} color={Colors.textPrimary} />
@@ -126,7 +138,6 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Camera */}
         {permission?.granted ? (
           <View style={scanStyles.cameraWrapper}>
             <CameraView
@@ -134,7 +145,6 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
               barcodeScannerSettings={{ barcodeTypes: ['code128', 'code39', 'ean13', 'ean8', 'qr'] }}
               onBarcodeScanned={scanning ? handleBarcodeScan : undefined}
             />
-            {/* Scan overlay */}
             <View style={scanStyles.overlay}>
               <View style={scanStyles.scanFrame}>
                 <View style={[scanStyles.corner, scanStyles.cornerTL]} />
@@ -153,7 +163,6 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
           </View>
         )}
 
-        {/* Scanned Items List */}
         <View style={[scanStyles.itemsSection, { backgroundColor: Colors.surface }]}>
           <View style={scanStyles.itemsHeader}>
             <Text style={[scanStyles.itemsTitle, { color: Colors.textPrimary }]}>
@@ -200,7 +209,6 @@ const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
             </ScrollView>
           )}
 
-          {/* Total + Confirm */}
           {scannedItems.length > 0 && (
             <View style={[scanStyles.confirmSection, { borderTopColor: Colors.border }]}>
               <View style={scanStyles.totalRow}>
@@ -457,7 +465,14 @@ export default function CustomerTabScreen({ route, navigation }) {
     const pays = await getPayments(initCustomer.id);
     const bill = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const paid = pays.reduce((sum, p) => sum + p.amount, 0);
-    await saveReceiptSnapshot(initCustomer.id, customer?.name || initCustomer.name, items, pays, bill, paid, Math.max(0, bill - paid));
+    const bal = Math.max(0, bill - paid);
+
+    // Play success sound if fully paid
+    if (bal === 0 && bill > 0) {
+      await playSound(require('../../assets/sounds/success.mp3'));
+    }
+
+    await saveReceiptSnapshot(initCustomer.id, customer?.name || initCustomer.name, items, pays, bill, paid, bal);
     load();
   };
 
@@ -480,6 +495,10 @@ export default function CustomerTabScreen({ route, navigation }) {
           const pays = await getPayments(initCustomer.id);
           const bill = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
           const paid = pays.reduce((sum, p) => sum + p.amount, 0);
+
+          // Always play success sound on settle
+          await playSound(require('../../assets/sounds/success.mp3'));
+
           await saveReceiptSnapshot(initCustomer.id, customer?.name || initCustomer.name, items, pays, bill, paid, 0);
           load();
         },
@@ -491,7 +510,6 @@ export default function CustomerTabScreen({ route, navigation }) {
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Balance Summary */}
         <Animated.View entering={FadeInDown.duration(300)}>
           <View style={[styles.summaryCard, { backgroundColor: Colors.surface }, settled && { borderWidth: 2, borderColor: Colors.success }]}>
             {settled && (
@@ -519,15 +537,9 @@ export default function CustomerTabScreen({ route, navigation }) {
           </View>
         </Animated.View>
 
-        {/* Action Buttons */}
         <Animated.View entering={FadeInDown.delay(80).duration(300)} style={styles.actionsRow}>
           <Button title="Add Item" onPress={() => setAddItemVisible(true)} style={{ flex: 1 }} />
-          <Button
-            title="Scan"
-            variant="secondary"
-            onPress={() => setScannerVisible(true)}
-            style={{ flex: 1 }}
-          />
+          <Button title="Scan" variant="secondary" onPress={() => setScannerVisible(true)} style={{ flex: 1 }} />
           {balance > 0 && (
             <>
               <Button title="Pay" variant="secondary" onPress={() => setPaymentVisible(true)} style={{ flex: 1 }} />
@@ -536,7 +548,6 @@ export default function CustomerTabScreen({ route, navigation }) {
           )}
         </Animated.View>
 
-        {/* Tab Items */}
         <Animated.View entering={FadeInDown.delay(120).duration(300)}>
           <SectionHeader title={`Tab Items (${tabItems.length})`} />
           {tabItems.length === 0 ? (
@@ -577,7 +588,6 @@ export default function CustomerTabScreen({ route, navigation }) {
           )}
         </Animated.View>
 
-        {/* Payment Log */}
         <Animated.View entering={FadeInDown.delay(200).duration(300)} style={{ marginTop: Spacing.lg }}>
           <SectionHeader title={`Payment Log (${payments.length})`} />
           {payments.length === 0 ? (
