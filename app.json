@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Stokku",
-    "slug": "stokku-",
+    "name": "Zaiko",
+    "slug": "zaiko-",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,14 +14,14 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.stokku.app"
+      "bundleIdentifier": "com.Zaiko.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a1a2e"
       },
-      "package": "com.stokku.app",
+      "package": "com.zaiko.app",
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
@@ -36,24 +36,30 @@
       "expo-sqlite",
       "expo-asset",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Zaiko to use the camera for scanning product barcodes."
+        }
+      ],
+      [
         "expo-media-library",
         {
-          "photosPermission": "Allow Stokku to save receipts to your gallery.",
-          "savePhotosPermission": "Allow Stokku to save receipt images.",
+          "photosPermission": "Allow Zaiko to save receipts to your gallery.",
+          "savePhotosPermission": "Allow Zaiko to save receipt images.",
           "isAccessMediaLocationEnabled": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Stokku to access your photos for product images.",
-          "cameraPermission": "Allow Stokku to take product photos."
+          "photosPermission": "Allow Zaiko to access your photos for product images.",
+          "cameraPermission": "Allow Zaiko to take product photos."
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "de2aeafd-c82e-4e58-8920-76d2f1d793ee"
+        "projectId": "ff651b58-603f-4467-b5fa-0dbaef84f5d9"
       }
     }
   }

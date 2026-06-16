@@ -77,6 +77,9 @@ export const initDatabase = async () => {
 
   // Migrations
   try {
+  await database.execAsync(`ALTER TABLE products ADD COLUMN sku TEXT;`);
+  } catch (e) {}
+  try {
     await database.execAsync(`ALTER TABLE products ADD COLUMN image_uri TEXT;`);
   } catch (e) {}
   try {
@@ -93,9 +96,13 @@ export const getProducts = async () => {
 
 export const addProduct = async (name, price, quantity, imageUri = null) => {
   const database = await getDb();
+  // Generate SKU: ZK-000001 format
+  const countResult = await database.getFirstAsync('SELECT COUNT(*) as count FROM products');
+  const count = (countResult?.count || 0) + 1;
+  const sku = `ZK-${String(count).padStart(6, '0')}`;
   const result = await database.runAsync(
-    'INSERT INTO products (name, price, quantity, image_uri) VALUES (?, ?, ?, ?)',
-    [name, parseFloat(price), parseInt(quantity), imageUri]
+    'INSERT INTO products (name, price, quantity, image_uri, sku) VALUES (?, ?, ?, ?, ?)',
+    [name, parseFloat(price), parseInt(quantity), imageUri, sku]
   );
   return result.lastInsertRowId;
 };

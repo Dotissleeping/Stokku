@@ -1,20 +1,222 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  Modal, KeyboardAvoidingView, Platform, ScrollView, TextInput,
+  Modal, KeyboardAvoidingView, Platform, ScrollView,
+  TextInput, Vibration,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import {
   addPayment, addTabItem, decrementStock, deletePayment,
-  getCustomerById, getPayments, getProducts, getTabItems,
+  getCustomerById, getDb, getPayments, getProducts, getTabItems,
   removeTabItem, saveReceiptSnapshot, voidTabItem,
 } from '../database/db';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { DarkColors, LightColors, Radius, Shadow, Spacing } from '../utils/theme';
 import { useTheme } from '../utils/ThemeContext';
 import { Button, Card, Divider, SectionHeader } from '../components/UI';
+
+// ─── Barcode Scanner Modal ────────────────────────────────────────────────────
+
+const BarcodeScannerModal = ({ visible, onClose, onConfirmAll }) => {
+  const { isDark } = useTheme();
+  const Colors = isDark ? DarkColors : LightColors;
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scannedItems, setScannedItems] = useState([]);
+  const [scanning, setScanning] = useState(true);
+  const [lastScanned, setLastScanned] = useState('');
+  const lastScannedRef = useRef('');
+  const cooldownRef = useRef(false);
+
+  useEffect(() => {
+    if (visible) {
+      setScannedItems([]);
+      setScanning(true);
+      setLastScanned('');
+      lastScannedRef.current = '';
+      cooldownRef.current = false;
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible && !permission?.granted) {
+      requestPermission();
+    }
+  }, [visible]);
+
+  const handleBarcodeScan = async ({ data }) => {
+    if (cooldownRef.current || data === lastScannedRef.current) return;
+    cooldownRef.current = true;
+    lastScannedRef.current = data;
+    setLastScanned(data);
+
+    // Find product by SKU
+    const database = await getDb();
+    const product = await database.getFirstAsync(
+      'SELECT * FROM products WHERE sku = ?', [data]
+    );
+
+    if (!product) {
+      Vibration.vibrate([0, 100, 50, 100]); // double vibrate = not found
+      Alert.alert('Not Found', `No product with barcode: ${data}`);
+      setTimeout(() => { cooldownRef.current = false; }, 2000);
+      return;
+    }
+
+    Vibration.vibrate(80); // single short vibrate = found
+
+    setScannedItems(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) {
+        // Check stock
+        if (existing.quantity + 1 > product.quantity) {
+          Alert.alert('Insufficient Stock', `Only ${product.quantity} in stock.`);
+          return prev;
+        }
+        return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      if (product.quantity === 0) {
+        Alert.alert('Out of Stock', `${product.name} is out of stock.`);
+        return prev;
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+
+    // Cooldown before next scan
+    setTimeout(() => { cooldownRef.current = false; }, 1500);
+  };
+
+  const updateQty = (id, delta) => {
+    setScannedItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const newQty = item.quantity + delta;
+      if (newQty <= 0) return item;
+      if (newQty > item.quantity_in_stock) {
+        Alert.alert('Insufficient Stock');
+        return item;
+      }
+      return { ...item, quantity: newQty };
+    }));
+  };
+
+  const removeItem = (id) => {
+    setScannedItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const handleConfirm = () => {
+    if (scannedItems.length === 0) return Alert.alert('Scan at least one item first');
+    onConfirmAll(scannedItems);
+    onClose();
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={[scanStyles.container, { backgroundColor: Colors.background }]}>
+
+        {/* Header */}
+        <View style={[scanStyles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.border }]}>
+          <TouchableOpacity onPress={onClose} style={scanStyles.closeBtn}>
+            <Ionicons name="close" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={[scanStyles.headerTitle, { color: Colors.textPrimary }]}>Scan Barcodes</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {/* Camera */}
+        {permission?.granted ? (
+          <View style={scanStyles.cameraWrapper}>
+            <CameraView
+              style={scanStyles.camera}
+              barcodeScannerSettings={{ barcodeTypes: ['code128', 'code39', 'ean13', 'ean8', 'qr'] }}
+              onBarcodeScanned={scanning ? handleBarcodeScan : undefined}
+            />
+            {/* Scan overlay */}
+            <View style={scanStyles.overlay}>
+              <View style={scanStyles.scanFrame}>
+                <View style={[scanStyles.corner, scanStyles.cornerTL]} />
+                <View style={[scanStyles.corner, scanStyles.cornerTR]} />
+                <View style={[scanStyles.corner, scanStyles.cornerBL]} />
+                <View style={[scanStyles.corner, scanStyles.cornerBR]} />
+              </View>
+              <Text style={scanStyles.overlayHint}>Point camera at product barcode</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={[scanStyles.cameraWrapper, { backgroundColor: Colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }]}>
+            <Ionicons name="camera-off-outline" size={48} color={Colors.textMuted} />
+            <Text style={[scanStyles.noPermText, { color: Colors.textMuted }]}>Camera permission required</Text>
+            <Button title="Grant Permission" onPress={requestPermission} style={{ marginTop: 16 }} />
+          </View>
+        )}
+
+        {/* Scanned Items List */}
+        <View style={[scanStyles.itemsSection, { backgroundColor: Colors.surface }]}>
+          <View style={scanStyles.itemsHeader}>
+            <Text style={[scanStyles.itemsTitle, { color: Colors.textPrimary }]}>
+              Scanned Items ({scannedItems.length})
+            </Text>
+            {scannedItems.length > 0 && (
+              <TouchableOpacity onPress={() => setScannedItems([])}>
+                <Text style={[scanStyles.clearText, { color: Colors.danger }]}>Clear All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {scannedItems.length === 0 ? (
+            <Text style={[scanStyles.emptyText, { color: Colors.textMuted }]}>
+              No items scanned yet — point camera at a barcode
+            </Text>
+          ) : (
+            <ScrollView style={scanStyles.itemsList} showsVerticalScrollIndicator={false}>
+              {scannedItems.map((item, index) => (
+                <View key={item.id}>
+                  {index > 0 && <View style={[scanStyles.divider, { backgroundColor: Colors.border }]} />}
+                  <View style={scanStyles.scannedItem}>
+                    <View style={scanStyles.scannedItemLeft}>
+                      <Text style={[scanStyles.scannedName, { color: Colors.textPrimary }]}>{item.name}</Text>
+                      <Text style={[scanStyles.scannedPrice, { color: Colors.textSecondary }]}>
+                        {formatCurrency(item.price)} × {item.quantity} = {formatCurrency(item.price * item.quantity)}
+                      </Text>
+                    </View>
+                    <View style={scanStyles.qtyControls}>
+                      <TouchableOpacity onPress={() => updateQty(item.id, -1)} style={[scanStyles.qtyBtn, { backgroundColor: Colors.primaryLight }]}>
+                        <Text style={[scanStyles.qtyBtnText, { color: Colors.primary }]}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={[scanStyles.qtyValue, { color: Colors.textPrimary }]}>{item.quantity}</Text>
+                      <TouchableOpacity onPress={() => updateQty(item.id, 1)} style={[scanStyles.qtyBtn, { backgroundColor: Colors.primaryLight }]}>
+                        <Text style={[scanStyles.qtyBtnText, { color: Colors.primary }]}>+</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => removeItem(item.id)} style={scanStyles.removeBtn}>
+                        <Ionicons name="close" size={16} color={Colors.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Total + Confirm */}
+          {scannedItems.length > 0 && (
+            <View style={[scanStyles.confirmSection, { borderTopColor: Colors.border }]}>
+              <View style={scanStyles.totalRow}>
+                <Text style={[scanStyles.totalLabel, { color: Colors.textSecondary }]}>Total</Text>
+                <Text style={[scanStyles.totalValue, { color: Colors.primary }]}>
+                  {formatCurrency(scannedItems.reduce((sum, i) => sum + i.price * i.quantity, 0))}
+                </Text>
+              </View>
+              <Button title={`Add ${scannedItems.length} Item${scannedItems.length > 1 ? 's' : ''} to Tab`} onPress={handleConfirm} />
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 // ─── Add Item Modal ───────────────────────────────────────────────────────────
 
@@ -159,12 +361,8 @@ const VoidModal = ({ visible, item, onClose, onVoid }) => {
             <Text style={[styles.modalTitle, { color: Colors.textPrimary, marginBottom: 0, marginLeft: 8 }]}>Void Item</Text>
           </View>
           <Text style={[styles.voidProductName, { color: Colors.textSecondary }]}>{item.product_name}</Text>
-          <Text style={[styles.voidSubtitle, { color: Colors.textMuted }]}>
-            {item.quantity} in tab · {formatCurrency(item.price)} each
-          </Text>
-          <Text style={[styles.voidNote, { color: Colors.textMuted }]}>
-            Voided items will be returned to inventory stock.
-          </Text>
+          <Text style={[styles.voidSubtitle, { color: Colors.textMuted }]}>{item.quantity} in tab · {formatCurrency(item.price)} each</Text>
+          <Text style={[styles.voidNote, { color: Colors.textMuted }]}>Voided items will be returned to inventory stock.</Text>
           <View style={styles.qtyRow}>
             <Text style={[styles.qtyLabel, { color: Colors.textPrimary }]}>Void Qty:</Text>
             <TouchableOpacity onPress={() => setQty(Math.max(1, parseInt(qty || 1) - 1).toString())} style={[styles.qtyBtn, { backgroundColor: Colors.warningLight }]}>
@@ -198,6 +396,7 @@ export default function CustomerTabScreen({ route, navigation }) {
   const [paymentVisible, setPaymentVisible] = useState(false);
   const [voidModalVisible, setVoidModalVisible] = useState(false);
   const [voidingItem, setVoidingItem] = useState(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const totalBill = tabItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -229,6 +428,14 @@ export default function CustomerTabScreen({ route, navigation }) {
   const handleAddItem = async (product, quantity) => {
     await addTabItem(initCustomer.id, product.id, product.name, product.price, quantity);
     await decrementStock(product.id, quantity);
+    load();
+  };
+
+  const handleScanConfirm = async (scannedItems) => {
+    for (const item of scannedItems) {
+      await addTabItem(initCustomer.id, item.id, item.name, item.price, item.quantity);
+      await decrementStock(item.id, item.quantity);
+    }
     load();
   };
 
@@ -315,6 +522,12 @@ export default function CustomerTabScreen({ route, navigation }) {
         {/* Action Buttons */}
         <Animated.View entering={FadeInDown.delay(80).duration(300)} style={styles.actionsRow}>
           <Button title="Add Item" onPress={() => setAddItemVisible(true)} style={{ flex: 1 }} />
+          <Button
+            title="Scan"
+            variant="secondary"
+            onPress={() => setScannerVisible(true)}
+            style={{ flex: 1 }}
+          />
           {balance > 0 && (
             <>
               <Button title="Pay" variant="secondary" onPress={() => setPaymentVisible(true)} style={{ flex: 1 }} />
@@ -328,7 +541,7 @@ export default function CustomerTabScreen({ route, navigation }) {
           <SectionHeader title={`Tab Items (${tabItems.length})`} />
           {tabItems.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={[styles.emptyText, { color: Colors.textMuted }]}>No items yet — add from inventory</Text>
+              <Text style={[styles.emptyText, { color: Colors.textMuted }]}>No items yet — add or scan from inventory</Text>
             </Card>
           ) : (
             <Card style={styles.itemsCard}>
@@ -397,6 +610,7 @@ export default function CustomerTabScreen({ route, navigation }) {
       <AddItemModal visible={addItemVisible} onClose={() => setAddItemVisible(false)} onAdd={handleAddItem} />
       <PaymentModal visible={paymentVisible} maxAmount={balance} onClose={() => setPaymentVisible(false)} onPay={handlePayment} />
       <VoidModal visible={voidModalVisible} item={voidingItem} onClose={() => { setVoidModalVisible(false); setVoidingItem(null); }} onVoid={handleVoidItem} />
+      <BarcodeScannerModal visible={scannerVisible} onClose={() => setScannerVisible(false)} onConfirmAll={handleScanConfirm} />
     </View>
   );
 }
@@ -412,7 +626,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   summaryValue: { fontSize: 18, fontWeight: '800' },
   summaryDivider: { width: 1, height: 40 },
-  actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+  actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg, flexWrap: 'wrap' },
   itemsCard: { padding: 0, overflow: 'hidden' },
   tabItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 12 },
   tabItemLeft: { flex: 1 },
@@ -456,4 +670,42 @@ const styles = StyleSheet.create({
   voidProductName: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
   voidSubtitle: { fontSize: 13, marginBottom: 4 },
   voidNote: { fontSize: 12, fontStyle: 'italic', marginBottom: Spacing.md },
+});
+
+const scanStyles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: 14, borderBottomWidth: 1 },
+  closeBtn: { width: 40, alignItems: 'flex-start' },
+  headerTitle: { fontSize: 18, fontWeight: '800' },
+  cameraWrapper: { height: 280 },
+  camera: { flex: 1 },
+  overlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  scanFrame: { width: 220, height: 120, position: 'relative', marginBottom: 16 },
+  corner: { position: 'absolute', width: 24, height: 24, borderColor: '#FFFFFF', borderWidth: 3 },
+  cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
+  cornerTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
+  cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
+  cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
+  overlayHint: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  noPermText: { fontSize: 14, marginTop: 12, textAlign: 'center' },
+  itemsSection: { flex: 1, paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
+  itemsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+  itemsTitle: { fontSize: 16, fontWeight: '700' },
+  clearText: { fontSize: 13, fontWeight: '600' },
+  emptyText: { fontSize: 14, fontStyle: 'italic', textAlign: 'center', paddingVertical: Spacing.lg },
+  itemsList: { maxHeight: 200 },
+  divider: { height: 1, marginVertical: 2 },
+  scannedItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  scannedItemLeft: { flex: 1 },
+  scannedName: { fontSize: 14, fontWeight: '600' },
+  scannedPrice: { fontSize: 12, marginTop: 2 },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  qtyBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  qtyBtnText: { fontSize: 16, fontWeight: '700' },
+  qtyValue: { fontSize: 15, fontWeight: '700', minWidth: 24, textAlign: 'center' },
+  removeBtn: { padding: 4 },
+  confirmSection: { borderTopWidth: 1, paddingTop: Spacing.md, paddingBottom: Spacing.lg },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  totalLabel: { fontSize: 14, fontWeight: '600' },
+  totalValue: { fontSize: 16, fontWeight: '800' },
 });
