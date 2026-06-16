@@ -48,7 +48,7 @@ function Root() {
         <ExpoStatusBar style={isDark ? 'light' : 'dark'} backgroundColor={Colors.background} translucent={false} />
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
         <Text style={styles.splashLogo}>🛒</Text>
-        <Text style={[styles.splashTitle, { color: Colors.textPrimary }]}>Stokku</Text>
+        <Text style={[styles.splashTitle, { color: Colors.textPrimary }]}>Zaiko</Text>
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
       </View>
     );

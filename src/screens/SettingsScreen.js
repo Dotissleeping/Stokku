@@ -152,7 +152,7 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionLabel, { color: Colors.textMuted }]}>ABOUT</Text>
         <View style={[styles.card, { backgroundColor: Colors.surface }]}>
           {[
-            { label: 'App', value: 'Stokku' },
+            { label: 'App', value: 'Zaiko' },
             { label: 'Version', value: '1.0.0 Beta' },
             { label: 'Storage', value: 'Local SQLite' },
           ].map((item, index, arr) => (

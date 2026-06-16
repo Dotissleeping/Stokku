@@ -8,7 +8,7 @@ import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimat
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import * as Print from 'expo-print';
+import * as MediaLibrary from 'expo-media-library';
 import ViewShot from 'react-native-view-shot';
 import { Ionicons } from '@expo/vector-icons';
 import Barcode from 'react-native-barcode-svg';
@@ -35,33 +35,31 @@ const BarcodeModal = ({ visible, product, onClose }) => {
   const { isDark } = useTheme();
   const Colors = isDark ? DarkColors : LightColors;
   const barcodeRef = useRef(null);
+  const [saving, setSaving] = useState(false);
 
   if (!product) return null;
 
-  const handlePrint = async () => {
+  const handleSave = async () => {
     try {
-      const html = `
-        <html>
-          <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:Arial,sans-serif;">
-            <h2 style="margin-bottom:4px;font-size:20px;">${product.name}</h2>
-            <p style="margin:0 0 8px 0;color:#666;font-size:14px;">${formatCurrency(product.price)}</p>
-            <svg viewBox="0 0 300 100" width="300" height="100">
-              <!-- barcode renders via expo-print HTML -->
-            </svg>
-            <img src="https://bwipjs-api.metafloor.com/?bcid=code128&text=${product.sku}&scale=3&height=10&includetext" width="300"/>
-            <p style="font-size:16px;letter-spacing:4px;margin-top:8px;">${product.sku}</p>
-            <p style="font-size:11px;color:#999;margin-top:16px;">Zaiko Inventory Manager</p>
-          </body>
-        </html>
-      `;
-      await Print.printAsync({ html });
+      setSaving(true);
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Allow gallery access to save barcode.');
+        return;
+      }
+      const uri = await barcodeRef.current.capture();
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('Saved!', 'Barcode image saved to your gallery.');
     } catch (e) {
-      Alert.alert('Error', 'Could not print barcode.');
+      Alert.alert('Error', 'Could not save barcode.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleShare = async () => {
     try {
+      setSaving(true);
       const uri = await barcodeRef.current.capture();
       await Share.share({
         url: uri,
@@ -70,6 +68,8 @@ const BarcodeModal = ({ visible, product, onClose }) => {
       });
     } catch (e) {
       Alert.alert('Error', 'Could not share barcode.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -101,15 +101,16 @@ const BarcodeModal = ({ visible, product, onClose }) => {
 
           <View style={styles.barcodeActions}>
             <Button
-              title="Print"
-              onPress={handlePrint}
+              title="Save to Gallery"
+              onPress={handleSave}
+              loading={saving}
               style={{ flex: 1 }}
-              icon="print-outline"
             />
             <Button
               title="Share"
               variant="secondary"
               onPress={handleShare}
+              loading={saving}
               style={{ flex: 1 }}
             />
           </View>

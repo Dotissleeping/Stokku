@@ -45,7 +45,7 @@ export default function DashboardScreen({ navigation }) {
       {/* Header */}
       <Animated.View entering={FadeInDown.delay(0).duration(400)} style={styles.header}>
         <Text style={[styles.greeting, { color: Colors.textSecondary }]}>Good day!</Text>
-        <Text style={[styles.appName, { color: Colors.textPrimary }]}>Stokku</Text>
+        <Text style={[styles.appName, { color: Colors.textPrimary }]}>Zaiko</Text>
         <Text style={[styles.subheading, { color: Colors.textMuted }]}>Your business at a glance</Text>
       </Animated.View>
 
