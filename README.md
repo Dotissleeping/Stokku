@@ -148,7 +148,7 @@ cd Stokku
 # 2. Install dependencies
 npm install
 
-# 3. Start Expo dev server
+# 3. Start Expo dev
 npx expo start
 ```
 
